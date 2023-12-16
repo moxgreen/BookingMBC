@@ -1,0 +1,156 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+{% load static %}
+
+
+{% if user.is_authenticated %}
+
+
+<div class="container mt-3">
+  <head>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'CalendarApp/calendar_app_styles.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+  </head>
+  
+  <body>
+     <div id="formatted-bookings-data" data-json="{{ formatted_bookings_json }}"></div>
+     <div id="username" data-username="{{ username }}"></div>
+     <div id="facility" data-facility="{{ facilityname }}"></div>
+     <div id="groupname" data-groupname="{{ groupname }}"></div>
+     <div id="currmachine" data-currmachine="{{ machine2BookName }}"></div>
+     <div id="facilities4ThisUser" data-facilities4ThisUser="{{ facilities4ThisUser }}"></div>
+     <div id="otherMachinesInCurrentFacility" data-otherMachinesInCurrentFacility="{{ otherMachinesInCurrentFacility }}"></div>
+     
+      <div id='calendar-month'></div>
+      
+      <div id='change_machine'>
+            <h3>Booking: {{ machine2BookName }} </h3>
+            <h3>from the {{ facilityname }} facility</h3><br>
+            
+            
+            <div class="btn-group" id="machines" role="group" aria-label="machines">
+              <button id="previousServiceButton" type="button" class="btn btn-dark">previous service</button>
+              <button id="nextServiceButton" type="button" class="btn btn-dark">next service</button>
+              
+              <button class="btn btn-dark dropdown-toggle" id="servicesdropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Services
+              </button>
+              <ul class="dropdown-menu" id="machines-list">
+                    {% for mname in otherMachinesInCurrentFacility %}
+                        <li><a class="dropdown-item" href="#" data-itemname="{{ mname }}">{{ mname }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="btn-group" id='drpdown-facilities' rele="group" aria-label="facilities">
+                  <button class="btn btn-dark dropdown-toggle" id="facilitiesdropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Facilities
+                  </button>
+                  <ul class="dropdown-menu" id="facilities-list">
+                        {% for fname in facilities4ThisUser %}
+                            <li><a class="dropdown-item" href="#" data-facility="{{ fname }}">{{ fname }}</a></li>
+                        {% endfor %}
+                    </ul>
+            </div>
+            
+      </div>
+      
+
+
+      <div id='machine_usage'>
+          <h3>Machine Usage </h3>
+        
+          <table class="table table-bordered table-sm" id="machinesTable">
+              <thead>
+                  <tr class="table-secondary">
+                      <th>Machine</th><th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {% for machine_name, daily_usage_in_a_week in facility_usage_dict.items %}
+                      <tr>
+                          <td>{{ machine_name }}</td>
+                          {% for usage in daily_usage_in_a_week %}
+                              {% if usage == 0 %}
+                                  <td class="table-light">Free</td>
+                              {% else %}
+                                  <td class="{% if usage < 30 %}table-success{% elif usage < 60 %}table-warning{% else %}table-danger{% endif %}">{{ usage|floatformat:2 }}%</td>
+                              {% endif %}
+                          {% endfor %}
+                      </tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+      </div>
+      
+      
+      <div id='calendar-week'</div>
+      <script src="{% static 'CalendarApp/calendar_page.js' %}"></script>
+
+  </body>
+</div>
+
+
+{% else %}
+
+<div class="col-md-6 offset-md-3">
+<h1>Login</h1>
+<br/>
+
+<form method="POST" action="{% url 'home' %}">
+	{% csrf_token %}
+
+  <div class="mb-3">
+    <input type="text" class="form-control" name="username", placeholder="Username" required>
+    
+  </div><br/>
+  <div class="mb-3">
+    <input type="password" class="form-control" name="password", placeholder="Password" required>
+  </div>
+  <br/>
+  <button type="submit" class="btn btn-secondary">Login</button>
+
+</form>
+
+
+
+{% endif %}
+
+
+
+<div class="modal" id="bookingFormModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">New Booking</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label for="titleInput" class="fs-5">Title:</label>
+                    <input type="text" class="form-control" id="titleInput" required>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="radio" class="form-check-input" id="assistanceYes" name="assistance" value="yes">
+                    <label class="form-check-label fs-6"" for="assistanceYes">Need Assistance</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" id="assistanceNo" name="assistance" value="no" checked>
+                    <label class="form-check-label fs-6"" for="assistanceNo">No Assistance Needed</label>
+                </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveChangesBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+{% endblock %}
+

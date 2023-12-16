@@ -1,0 +1,506 @@
+import json
+import pandas as pd
+from datetime import datetime, timedelta
+from .models import  Booking, Machine
+from UserApp.models import UserProfile
+from django.shortcuts import  render, HttpResponse, redirect
+from django.http import JsonResponse 
+from django.utils import timezone
+from django.db.models import Prefetch
+from django.contrib import messages
+
+
+def download_report_facilities(request):
+    # Query to get a list of all unique facilities
+    facilities_list = Machine.objects.values_list('facility', flat=True).distinct()   
+
+    start_date = request.GET.get('startDateFacilities')
+    end_date = request.GET.get('endDateFacilities')
+    
+    #define the response
+    fname="report_facilities.xlsx"
+    response = HttpResponse(content_type='application/xlsx')
+    response['Content-Disposition'] = f'attachment; filename={fname}'
+    
+    final_df = pd.DataFrame(columns=['Group Name'])
+    for facility in facilities_list:
+        df=generate_report_dataframe_facility(facility, start_date, end_date)
+        if not(df.empty):
+            final_df = pd.merge(final_df, df, on='Group Name', how='outer')
+
+    # Fill NaN values with 0
+    final_df.fillna(0, inplace=True)
+
+    with pd.ExcelWriter(response) as writer:
+        final_df.to_excel(writer, sheet_name='Facilities Cost Summary', index=False)
+
+    return response
+
+
+def generate_report_dataframe_facility(facility, start_date, end_date):
+    start=datetime.strptime(start_date, '%Y-%m-%d')
+    end=datetime.strptime(end_date, '%Y-%m-%d')
+    # Get Booking instances for the facility
+    print('start: ', start, 'end: ', end, facility)
+    bookings = Booking.objects.filter(machine_obj__facility=facility,
+                                      booked_start_date__date__gte=start.date(),
+                                      booked_end_date__date__lte=end.date()
+                                     )
+    group_costs = {}
+    
+    for booking in bookings:
+        usn=str(booking.username)
+
+        # Calculate the duration by subtracting booked_end_date from booked_start_date
+        duration_timedelta = booking.booked_end_date - booking.booked_start_date
+        duration_hours = duration_timedelta.total_seconds() / 3600
+        try:
+            # Get the group name for the user associated with the booking
+            user_group = UserProfile.objects.get(user__username = usn).group_name
+            # Get the affiliation of the user of this booking
+            external = UserProfile.objects.get(user__username=booking.username).is_external
+        except UserProfile.DoesNotExist:
+            user_group=usn+' deleted user'
+            external=False
+            
+        # Calculate the total cost based on the machine type (assisted or external)
+        if (booking.is_assisted):
+            if external:
+                cost_field='hourly_cost_external_assisted'
+            else:
+                cost_field='hourly_cost_assisted'
+        else:
+            if external:
+                cost_field='hourly_cost_external'
+            else:
+                cost_field='hourly_cost'
+            
+        hourly_cost = float(getattr(booking.machine_obj, cost_field))
+        total_cost = hourly_cost * duration_hours
+
+        # Update the dictionary with the cost for the current group
+        if user_group in group_costs:
+            group_costs[user_group] += total_cost
+        else:
+            group_costs[user_group] = total_cost
+    
+    # Convert the dictionary to a Pandas DataFrame
+    df = pd.DataFrame(list(group_costs.items()), columns=['Group Name', facility])
+    return df
+
+
+
+def download_report_group(request):
+    # Get report type and dates from the request
+    report_type = request.GET.get('reportType')
+    start_date = request.GET.get('startDateGroup')
+    end_date = request.GET.get('endDateGroup')
+    group_name = request.GET.get('groupName')
+    print('groupName', group_name, 'type: ', report_type, 'start: ', start_date, 'end: ', end_date)
+    
+    if group_name == "Select Group":
+            messages.error(request, "Please select an item from the dropdown menu.")
+            return redirect('CalendarApp:reports_view')        
+
+    df1, df2 = generate_report_dataframe(group_name, report_type, start_date, end_date)
+    if (df1.empty or df2.empty) :
+            messages.error(request, "There are no expenses to report. Please select another group or sets of dates")
+            return redirect('CalendarApp:reports_view')
+
+    messages.success(request, '')
+                     #"Expense summary report is being generated and will be available for download shortly.")
+    fname="report.xlsx"
+    response = HttpResponse(content_type='application/xlsx')
+    response['Content-Disposition'] = f'attachment; filename={fname}'
+    
+    with pd.ExcelWriter(response) as writer:
+        df2.to_excel(writer, sheet_name='Cost Summary', index=False)
+        df1.to_excel(writer, sheet_name='Detailed Expenses', index=False)
+
+    return response
+
+
+def generate_report_dataframe(group_name, report_type, start_date, end_date):
+    # Get UserProfile instances for the specified group
+    user_profiles = UserProfile.objects.filter(group_name=group_name)
+
+    if report_type == 'userDefinedTime':
+        start=datetime.strptime(start_date, '%Y-%m-%d')
+        end=datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        end=timezone.now()
+        start=end - timedelta(days=90)
+        #print('LAST 3 MONTHS= ' + start.strftime("%d-%b-%Y") + ' to ' + end.strftime("%d-%b-%Y"))
+
+
+    # Initialize an empty list to store dictionaries for each row
+    report_data = []
+
+    for user_profile in user_profiles:
+        # Get Booking instances for the user_profile
+        usn=user_profile.user.username
+        ln = user_profile.user.last_name
+        external=user_profile.is_external
+        bookings = Booking.objects.filter(username=usn,
+                                          booked_start_date__date__gte=start.date(),
+                                          booked_end_date__date__lte=end.date()
+                                         )
+
+        for booking in bookings:
+            # Calculate the duration by subtracting booked_end_date from booked_start_date
+            duration_timedelta = booking.booked_end_date - booking.booked_start_date
+            duration_hours = duration_timedelta.total_seconds() / 3600
+
+            # Calculate the total cost based on the machine type (assisted or external)
+            if (booking.is_assisted):
+                if external:
+                    cost_field='hourly_cost_external_assisted'
+                else:
+                    cost_field='hourly_cost_assisted'
+            else:
+                if external:
+                    cost_field='hourly_cost_external'
+                else:
+                    cost_field='hourly_cost'
+                
+            hourly_cost = float(getattr(booking.machine_obj, cost_field))
+            total_cost = hourly_cost * duration_hours
+
+            # Append a dictionary with the required data to the report_data list
+            report_data.append({
+                'user': usn,
+                'last name': ln, 
+                'service': booking.machine_obj.machine_name,
+                'facility': booking.machine_obj.facility,
+                'date': booking.booked_start_date.strftime("%d-%b-%Y"),
+                'hourly cost': hourly_cost,
+                'hours': duration_hours,
+                'total cost': total_cost,
+            })
+
+    # Create a DataFrame from the list of dictionaries
+    report_df = pd.DataFrame(report_data)
+    result_df = pd.DataFrame() #define result_df so that it can be returned in case of an empty report_df
+    
+    if report_df.empty : return report_df, result_df
+    
+    sum_total_cost_df = report_df.groupby('facility')['total cost'].sum().reset_index()
+    # Add an extra header for group_name and timeframe analyzed
+    timeframe_analyzed = start.strftime("%d-%b-%Y") + ' to ' + end.strftime("%d-%b-%Y")
+    
+    # Create a new DataFrame with a single row containing the extra information
+    extra_info_df = pd.DataFrame([[group_name, timeframe_analyzed]], columns=['Group Name', 'Timeframe Analyzed'])
+    
+    # Concatenate the DataFrames along columns
+    result_df = pd.concat([extra_info_df, sum_total_cost_df], axis=1)
+
+    return report_df, result_df
+
+
+def machines(request):
+    return HttpResponse("Machines web page.")
+    #return redirect('home')
+
+def reports_view(request):
+    # Get distinct group names
+    distinct_groups = UserProfile.objects.values_list('group_name', flat=True).distinct()
+
+    context = {'distinct_groups': distinct_groups}
+    return render(request, 'CalendarApp/reports_view.html', context)
+
+
+def calendar_view(request):
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+
+    machine2Book_name = str(user_profile.preferred_machine_name)
+    machines_allowed = user_profile.machines4ThisUser.all()
+    current_facility = Machine.objects.get(machine_name=machine2Book_name).facility
+    facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
+    otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    context['facility_usage_dict'] = calculate_percentage_of_workingday(user_profile, current_facility, timezone.now())
+    return render(request, 'CalendarApp/week_view.html', context)
+
+
+def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility):
+    current_datetime = timezone.now()    
+    days = get_previous_sunday_and_next_saturday(current_datetime)
+    #three_months_later_datetime = current_datetime + timedelta(days=90)  # Assuming 30 days per month
+    three_months_later_datetime = days['sun'] + timedelta(days=90)  # Assuming 30 days per month
+
+    # Retrieve upcoming_bookings queryset for dates within the next 3 months
+    upcoming_bookings = Booking.objects.filter(
+        #booked_start_date__gt=current_datetime,
+        booked_start_date__gt=days['sun'],
+        booked_start_date__lte=three_months_later_datetime,
+        machine_obj__machine_name=machine2Book_name
+    )
+    # Create a list to hold JSON objects for each booking
+    formatted_bookings = []
+    #print("formatted_bookings: ", formatted_bookings, "\n")
+
+    # Iterate through the upcoming bookings and format them as JSON
+    for booking in upcoming_bookings:
+        formatted_booking = {
+            "title": booking.title,
+            "start": booking.booked_start_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "end": booking.booked_end_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "editable": False,          # requied to make the event not resizable/draggable n1
+            "durationEditable": False,  # requied to make the event not resizable/draggable n2
+            "color" : "#007BFF" #"dodgerblue"
+        }
+        if booking.username != user.username :
+            formatted_booking["color"] = "grey"
+        if booking.booked_start_date < current_datetime:
+            if formatted_booking["color"] == "grey":
+                formatted_booking["color"]="lightgrey"
+            else:
+                formatted_booking["color"]="LightSteelBlue"
+
+        formatted_bookings.append(formatted_booking)
+    # Convert the list of formatted bookings to a JSON object
+    formatted_bookings_json = json.dumps(formatted_bookings, ensure_ascii=False)
+            
+    context = {
+        'username': user.username,
+        'groupname': user_profile.group_name,
+        'facilityname': current_facility,
+        'facilities4ThisUser' : facilities4ThisUser,
+        'machine2BookName': machine2Book_name,
+        'otherMachinesInCurrentFacility': otherMachinesInCurrentFacility,
+        'formatted_bookings_json': formatted_bookings_json,
+    }
+    return context
+
+
+def add_booking(request):
+    dt = request.GET.get("start", None)
+    start = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S%z")
+    dt = request.GET.get("end", None)
+    end = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S%z")
+    machine2Book_name = str(request.GET.get("currentmachine", None))
+    title = request.GET.get("title", None)
+    assistance = request.GET.get("assistance", None)
+
+    #print("assistance = ", assistance)
+    assistance = (assistance == "yes")
+    
+    
+    user = request.user
+    username = user.username
+    user_profile = UserProfile.objects.get(user=user)
+    #machine2Book_name = user_profile.preferred_machine_name
+    machine2Book = user_profile.machines4ThisUser.get(machine_name=machine2Book_name)    
+    event = Booking(username=username,
+                    title=str(title),
+                    machine_obj=machine2Book,
+                    booked_start_date=start,
+                    booked_end_date=end,
+                    is_assisted = assistance,
+                    duration=1)
+    
+    event.save()
+    return JsonResponse({"status": "success"})
+
+
+def del_booking(request):
+    machine2Book_name = str(request.GET.get("currentmachine", None))
+    dt = request.GET.get("start", None)
+    start = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S%z")
+
+    title = str(request.GET.get("title", None))
+
+    user = request.user
+    username = str(user.username)
+    #user_profile = UserProfile.objects.get(user=user)
+
+    b = Booking.objects.filter(
+         booked_start_date=start,
+         username=username,
+         title=title,
+         machine_obj__machine_name=machine2Book_name,
+        )
+    if b.count() == 1 :
+        booking=b.get()
+        print("booking DELETED: ", booking)
+        booking.delete()
+    else:
+        print("delete failed")    
+    return JsonResponse({"status": "success"})
+
+
+def move_booking(request):    
+    machine2Book_name = str(request.GET.get("currentmachine", None))
+    
+    newStartStr = request.GET.get("newStart", None)
+    newStart = datetime.strptime(newStartStr, "%Y-%m-%dT%H:%M:%S%z")
+    newEndStr = request.GET.get("newEnd", None)
+    newEnd = datetime.strptime(newEndStr, "%Y-%m-%dT%H:%M:%S%z")
+    oldStartStr = request.GET.get("oldStart", None)
+    oldStart = datetime.strptime(oldStartStr, "%Y-%m-%dT%H:%M:%S%z")
+    print("newStartStr: ", newStartStr, " newStart: ", newStart, " newEndStr: ", newEndStr,
+          " oldStartStr: ", oldStartStr, " oldStart: ", oldStart)
+    
+    # Retrieve the Booking object
+    usn=request.user.username
+    obj = Booking.objects.get(username=usn,
+                              machine_obj__machine_name=machine2Book_name,
+                              booked_start_date=oldStart)
+
+    # Update the Booking object
+    obj.booked_start_date = newStart
+    obj.booked_end_date = newEnd
+
+    # Save changes to the database
+    obj.save()
+
+    return JsonResponse({"status": "success"})
+    
+
+def next_machine(request):
+    current_machine_name = str(request.GET.get("currmachine", None))
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+
+    machines_allowed = user_profile.machines4ThisUser.all()
+    current_facility = Machine.objects.get(machine_name=current_machine_name).facility
+    facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
+    otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+
+    current_index = otherMachinesInCurrentFacility.index(current_machine_name)
+    next_index = (current_index + 1) % len(otherMachinesInCurrentFacility)
+    machine2Book_name = otherMachinesInCurrentFacility[next_index]
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    #return render(request, 'CalendarApp/week_view.html', context)
+    json_data = json.dumps(context, ensure_ascii=False)
+
+    return JsonResponse(json_data, safe=False)
+
+
+def previous_machine(request):
+    current_machine_name = str(request.GET.get("currmachine", None))
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+
+    machines_allowed = user_profile.machines4ThisUser.all()
+    current_facility = Machine.objects.get(machine_name=current_machine_name).facility
+    facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
+    otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+
+    current_index = otherMachinesInCurrentFacility.index(current_machine_name)
+    next_index = (current_index - 1) % len(otherMachinesInCurrentFacility)
+    machine2Book_name = otherMachinesInCurrentFacility[next_index]
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    #return render(request, 'CalendarApp/week_view.html', context)
+    json_data = json.dumps(context, ensure_ascii=False)
+
+    return JsonResponse(json_data, safe=False)
+
+
+def select_machine(request):
+    machine2Book_name = str(request.GET.get("selecteditem", None))
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+
+    machines_allowed = user_profile.machines4ThisUser.all()
+    current_facility = Machine.objects.get(machine_name=machine2Book_name).facility
+    facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
+    otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    json_data = json.dumps(context, ensure_ascii=False)
+
+    return JsonResponse(json_data, safe=False)
+
+
+def select_facility(request):
+    current_facility = str(request.GET.get("selecteditem", None))
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+    start = str(request.GET.get("start", None))
+    date = datetime.fromisoformat(start[:-1]) #it seems the final Z in the str is not recognized
+
+    machines_allowed = user_profile.machines4ThisUser.all()
+    facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
+    otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+    machine2Book_name = otherMachinesInCurrentFacility[0] #arbitraly select the machine in pos[0] to start with
+    
+    usage_dict = calculate_percentage_of_workingday(user_profile, current_facility, date)
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    context['usage_dict'] = usage_dict
+    
+    json_data = json.dumps(context, ensure_ascii=False)
+
+    return JsonResponse(json_data, safe=False)
+
+
+def calculate_percentage_of_workingday(user_profile, target_facility, day):
+#def calculate_percentage_of_workingday(target_facility, day):
+    dates = get_previous_sunday_and_next_saturday(day)
+    
+    # Get the machines in the specified facility that are allowed for the user
+    machines_in_facility = Machine.objects.filter(
+            facility=target_facility,
+            id__in=user_profile.machines4ThisUser.values_list('id', flat=True)
+        ).prefetch_related(
+                    Prefetch('booking_set', queryset=Booking.objects.filter(
+                        booked_start_date__date__gte=dates['sun'].date(),
+                        booked_end_date__date__lte=dates['sat'].date()
+                ), to_attr='filtered_bookings')
+            )
+    
+    # Create a dictionary to store daily_usage_in_a_week for each machine
+    facility_usage_dict = {}
+    
+    # Iterate over machines in the facility
+    for machine in machines_in_facility:
+        # Get the machine name
+        machine_name = machine.machine_name
+    
+        # Initialize daily_usage_in_a_week list with zeros
+        daily_usage_in_a_week = [0] * 7
+    
+        # Iterate over the filtered bookings for the machine
+        for booking in machine.filtered_bookings:
+            day_of_week = (booking.booked_start_date.weekday() + 1) % 7  # Adjust so that Sunday is accessed by [0]
+            total_hours = (booking.booked_end_date - booking.booked_start_date).total_seconds() / 3600 * 100 / 12 #calculate % in hours over 1/2 a day
+            daily_usage_in_a_week[day_of_week] += total_hours
+    
+        # Add the machine's daily_usage_in_a_week to the dictionary
+        #print(machine_name, daily_usage_in_a_week)
+        facility_usage_dict[machine_name] = daily_usage_in_a_week
+
+    return facility_usage_dict
+
+
+def machines_usage(request):
+    start = str(request.GET.get("start", None))
+    date = datetime.fromisoformat(start[:-1]) #it seems the final Z in the str is not recognized
+
+    facility = str(request.GET.get("facility", None))    
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+    
+    #day=datetime.strptime("Sun Dec 03 2023", "%a %b %d %Y") #this is the format from toDateString in Fullcalendar JS
+    days = get_previous_sunday_and_next_saturday(date)
+
+    context = calculate_percentage_of_workingday(user_profile, facility, days['sun'])
+    return JsonResponse(context, safe=False)
+
+
+def get_previous_sunday_and_next_saturday(specific_date):
+    # Find the previous Sunday; specific_date is a Datetime object
+    idx=(specific_date.weekday()+1)%7
+    sun = specific_date - timedelta(days=idx)
+    # Find the next Saturday
+    sat=sun + timedelta(days=6)
+    dates={'sat': sat, 'sun': sun}
+    return dates
+
+
+

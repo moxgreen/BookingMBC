@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% load static %}
+
+{% if user.is_authenticated %}
+
+<div class="container mt-3">
+    <head>
+      <link rel="stylesheet" type="text/css" href="{% static 'CalendarApp/calendar_app_styles.css' %}">
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+    </head>
+  
+    <div class="row">
+        <div class="col-md-6" id="form-1">
+            <form id="reportFormGroup">
+            <!-- first form content goes here -->
+                <div class="form-group">
+                    <h3>Report the expenses of a group</h><br></br>
+                    <label for="groupDropdown">Select Group:</label>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle mb-4" type="button" id="groupDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Select Group
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="groupDropdown">
+                            {% for group in distinct_groups %}
+                            <li><a class="dropdown-item" href="#" data-group="{{ group }}">{{ group }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div><!-- class="dropdown" -->
+                    
+                    <input type="radio" id="lastThreeMonths" name="reportType" value="lastThreeMonths" checked>
+                    <label for="lastThreeMonths">Report the last 3 months</label>                
+                    <br>
+                    
+                    <input type="radio" id="userDefinedTime" name="reportType" value="userDefinedTime">
+                    <label for="userDefinedTime">Report a user-defined time span</label>
+                    <br>
+                    
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDateGroup" name="startDateGroup" disabled>
+                    
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDateGroup" name="endDateGroup" disabled>
+                    <br>
+                    
+                    <a class="btn btn-secondary mt-4" href="#" id="downloadReportGroup">Download Report Group</a>
+                </div><!-- class="form-group" -->
+            </form><!--id="reportFormGroup"-->
+        </div><!--class="col-md-6" id="form-1"-->
+    
+        <div class="col-md-6" id="form-2">
+            <form id="reportFormFacility">
+                <!-- second form content goes here -->
+                <div class="form-group">
+                    <h3>Report the expenses of all facilities/group</h><br></br>
+                    <label for="form2Input">Select dates:</label>
+                    <br>
+
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDateFacilities" name="startDateFacilities">
+                    
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDateFacilities" name="endDateFacilities">
+                    <br>
+
+                    <a class="btn btn-secondary mt-4" href="#" id="downloadReportFacilities">Download Report Facilities</a>
+                </div><!-- class="form-group" -->
+            </form><!--id="reportFormFacility"-->
+        </div><!--col-md-6 id="form-2"-->
+        
+    </div><!--row-->
+</div> <!--container mt-3-->
+    
+    
+
+    <script src="{% static 'CalendarApp/reports.js' %}"></script>
+    
+ 
+</div>
+
+{% endif %}
+{% endblock %}

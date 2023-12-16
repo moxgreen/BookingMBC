@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+    {{ block.super }}
+    <div>
+        <h2>Unique Group Names</h2>
+        <ul>
+            {% for group in unique_groups %}
+                <li>{{ group.group_name }} ({{ group.total }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
