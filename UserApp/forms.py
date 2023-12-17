@@ -32,7 +32,7 @@ class SignUpForm(UserCreationForm):
     machines_allowed = forms.ModelMultipleChoiceField(
         label="Select which machines you are allowed to use",  # Add the label here
         #help_text='<span class="form-text text-muted"><small>Choose one or more machines.</small></span>',  # Add help text
-        queryset=Machine.objects.filter(is_open=True),  #Machine.objects.all(),
+        queryset=Machine.objects.filter(is_open=True).order_by('machine_name'),  #Machine.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check form-check-inline', 'id': 'your-checkbox-widget'}), #-inline
         required=True  # Set to True if selecting at least one machine is mandatory
     )
@@ -41,7 +41,7 @@ class SignUpForm(UserCreationForm):
     preferred_machine = forms.ModelChoiceField(
         label="Preferred Machine",
         help_text='<span class="form-text text-muted"><small>Choose one preferred machine.</small></span>',
-        queryset=Machine.objects.filter(is_open=True), #all(),
+        queryset=Machine.objects.filter(is_open=True).order_by('machine_name'), #all(),
         widget=forms.Select(attrs={'class': 'form-control'}),
         required=True
     )
