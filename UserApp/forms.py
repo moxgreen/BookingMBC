@@ -33,7 +33,7 @@ class SignUpForm(UserCreationForm):
         label="Select which machines you are allowed to use",  # Add the label here
         #help_text='<span class="form-text text-muted"><small>Choose one or more machines.</small></span>',  # Add help text
         queryset=Machine.objects.filter(is_open=True),  #Machine.objects.all(),
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check'}), #-inline
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check form-check-inline', 'id': 'your-checkbox-widget'}), #-inline
         required=True  # Set to True if selecting at least one machine is mandatory
     )
 
@@ -69,9 +69,9 @@ class SignUpForm(UserCreationForm):
         group_name = self.cleaned_data.get('group_name')
         
         is_external = self.cleaned_data['access_type']=='external'
-        print(user.username)
-        print('self cleaned: ', self.cleaned_data['access_type'])
-        print('is_external: ', is_external)
+        #print(user.username)
+        #print('self cleaned: ', self.cleaned_data['access_type'])
+        #print('is_external: ', is_external)
                 
         # Handle the 'machines4ThisUser' field and create the ManyToMany relationship
         selected_machines = self.cleaned_data.get('machines_allowed')
@@ -90,7 +90,7 @@ class SignUpForm(UserCreationForm):
 
 
     def clean(self):
-        print('clean\n')
+        #print('clean\n')
         cleaned_data = super().clean()
         selected_machines = cleaned_data.get('machines_allowed')
         preferred_machine_name = str(cleaned_data.get('preferred_machine'))
@@ -100,7 +100,7 @@ class SignUpForm(UserCreationForm):
 
             if preferred_machine_name not in names:
                 self.add_error('preferred_machine', 'Preferred machine must be one of the selected machines.')
-        print('cleaned_data')
+        #print('cleaned_data')
  
         return cleaned_data
 

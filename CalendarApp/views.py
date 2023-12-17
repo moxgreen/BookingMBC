@@ -41,7 +41,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
     start=datetime.strptime(start_date, '%Y-%m-%d')
     end=datetime.strptime(end_date, '%Y-%m-%d')
     # Get Booking instances for the facility
-    print('start: ', start, 'end: ', end, facility)
+    #print('start: ', start, 'end: ', end, facility)
     bookings = Booking.objects.filter(machine_obj__facility=facility,
                                       booked_start_date__date__gte=start.date(),
                                       booked_end_date__date__lte=end.date()
@@ -55,27 +55,39 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
         duration_timedelta = booking.booked_end_date - booking.booked_start_date
         duration_hours = duration_timedelta.total_seconds() / 3600
         try:
+            u = UserProfile.objects.get(user__username = usn)
             # Get the group name for the user associated with the booking
-            user_group = UserProfile.objects.get(user__username = usn).group_name
+            user_group = u.group_name
             # Get the affiliation of the user of this booking
-            external = UserProfile.objects.get(user__username=booking.username).is_external
+            external = UserProfile.objects.get(user__username=usn).is_external
+            mb = u.machines_bought
+            buyer = False
+            #check if the user of this booking has ever bought machines
+            if (mb.count() != 0):
+                thisBookedMachine = booking.machine_obj
+                #search if the machine of this booking is present
+                #    in the list of machines bought by the user
+                buyer = u.machines_bought.filter(pk=thisBookedMachine.pk).exists()
         except UserProfile.DoesNotExist:
             user_group=usn+' deleted user'
-            external=False
+            external = buyer = False            
             
-        # Calculate the total cost based on the machine type (assisted or external)
-        if (booking.is_assisted):
-            if external:
-                cost_field='hourly_cost_external_assisted'
-            else:
-                cost_field='hourly_cost_assisted'
+        if buyer:
+            hourly_cost = float(booking.machine_obj.hourly_cost_buyer)
         else:
-            if external:
-                cost_field='hourly_cost_external'
+            # Calculate the total cost based on the machine type (assisted or external)
+            if (booking.is_assisted):
+                if external:
+                    cost_field='hourly_cost_external_assisted'
+                else:
+                    cost_field='hourly_cost_assisted'
             else:
-                cost_field='hourly_cost'
-            
-        hourly_cost = float(getattr(booking.machine_obj, cost_field))
+                if external:
+                    cost_field='hourly_cost_external'
+                else:
+                    cost_field='hourly_cost'
+            hourly_cost = float(getattr(booking.machine_obj, cost_field))
+        
         total_cost = hourly_cost * duration_hours
 
         # Update the dictionary with the cost for the current group
@@ -102,7 +114,7 @@ def download_report_group(request):
             messages.error(request, "Please select an item from the dropdown menu.")
             return redirect('CalendarApp:reports_view')        
 
-    df1, df2 = generate_report_dataframe(group_name, report_type, start_date, end_date)
+    df1, df2 = generate_report_dataframe_group(group_name, report_type, start_date, end_date)
     if (df1.empty or df2.empty) :
             messages.error(request, "There are no expenses to report. Please select another group or sets of dates")
             return redirect('CalendarApp:reports_view')
@@ -120,7 +132,7 @@ def download_report_group(request):
     return response
 
 
-def generate_report_dataframe(group_name, report_type, start_date, end_date):
+def generate_report_dataframe_group(group_name, report_type, start_date, end_date):
     # Get UserProfile instances for the specified group
     user_profiles = UserProfile.objects.filter(group_name=group_name)
 
@@ -151,19 +163,36 @@ def generate_report_dataframe(group_name, report_type, start_date, end_date):
             duration_timedelta = booking.booked_end_date - booking.booked_start_date
             duration_hours = duration_timedelta.total_seconds() / 3600
 
-            # Calculate the total cost based on the machine type (assisted or external)
-            if (booking.is_assisted):
-                if external:
-                    cost_field='hourly_cost_external_assisted'
-                else:
-                    cost_field='hourly_cost_assisted'
-            else:
-                if external:
-                    cost_field='hourly_cost_external'
-                else:
-                    cost_field='hourly_cost'
+            try:
+                # Get the group name for the user associated with the booking
+                external = user_profile.is_external
+                mb = user_profile.machines_bought
+                buyer = False
+                #check if the user of this booking has ever bought machines
+                if (mb.count() != 0):
+                    thisBookedMachine = booking.machine_obj
+                    #search if the machine of this booking is present
+                    #    in the list of machines bought by the user
+                    buyer = user_profile.machines_bought.filter(pk=thisBookedMachine.pk).exists()
+            except UserProfile.DoesNotExist:
+                external = buyer = False            
                 
-            hourly_cost = float(getattr(booking.machine_obj, cost_field))
+            if buyer:
+                hourly_cost = float(booking.machine_obj.hourly_cost_buyer)
+            else:
+                # Calculate the total cost based on the machine type (assisted or external)
+                if (booking.is_assisted):
+                    if external:
+                        cost_field='hourly_cost_external_assisted'
+                    else:
+                        cost_field='hourly_cost_assisted'
+                else:
+                    if external:
+                        cost_field='hourly_cost_external'
+                    else:
+                        cost_field='hourly_cost'
+                hourly_cost = float(getattr(booking.machine_obj, cost_field))
+
             total_cost = hourly_cost * duration_hours
 
             # Append a dictionary with the required data to the report_data list

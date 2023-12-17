@@ -8,6 +8,7 @@ class Machine(models.Model):
     hourly_cost_assisted = models.DecimalField(max_digits=5, decimal_places=2)
     hourly_cost_external = models.DecimalField(max_digits=5, decimal_places=2)
     hourly_cost_external_assisted = models.DecimalField(max_digits=5, decimal_places=2)
+    hourly_cost_buyer = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=True, blank=True )
 
     def __str__(self):
         return self.machine_name
