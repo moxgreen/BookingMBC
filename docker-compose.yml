@@ -1,0 +1,29 @@
+version: "3"
+services:
+  app:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    entrypoint: ["./wait.sh"]
+    depends_on:
+      - db
+    ports:
+      - "8011:8001"
+
+  db:
+    image: mysql:8.0.21
+    ports:
+      - "30002:3306"
+    command: --init-file /data/application/init.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: bookimgmbc
+      MYSQL_DATABASE: bookimgmbc
+    volumes:
+      - ./db/script.sql:/data/application/init.sql
+      - bookimgmbc_db:/var/lib/mysql
+    cap_add:
+      - SYS_NICE  
+
+volumes:
+  bookimgmbc_db:
+    external: true
