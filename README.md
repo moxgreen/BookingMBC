@@ -1,10 +1,10 @@
-# 3plex_frontend_server
+# Booking MBC
 
 ## Docs from Stabulario to be adapted - work in progress
 
 ## Installation
 ### Creating the db volume:
-sudo docker volume create triplex_db
+sudo docker volume create booking_mbc
 
 ### Changing environment
 * Environment variables for server config are set inside docker-compose.yml
