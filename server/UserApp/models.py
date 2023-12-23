@@ -11,8 +11,8 @@ from django.db.models import Q
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     group_name = models.CharField(max_length=100)
-    machines4ThisUser = models.ManyToManyField(Machine, related_name='machines4ThisUser', null=True, blank=True)
-    machines_bought = models.ManyToManyField(Machine, related_name='machines_bought', null=True, blank=True)
+    machines4ThisUser = models.ManyToManyField(Machine, related_name='machines4ThisUser', blank=True)
+    machines_bought = models.ManyToManyField(Machine, related_name='machines_bought', blank=True)
     preferred_machine_name =  models.CharField(max_length=50)
     is_external = models.BooleanField(default=True, null=True, blank=True)
     
