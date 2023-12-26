@@ -26,9 +26,8 @@ SECRET_KEY = "django-insecure-=#s7@(1l-o-73twul*cpcb0ho64)4g427ngxaxm)4u!t95coex
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-#ALLOWED_HOSTS = ["https://booking.unito.it/"]
-# Add '127.0.0.1' to ALLOWED_HOSTS
-ALLOWED_HOSTS = [] #'127.0.0.1'
+ALLOWED_HOSTS = ["booking.unito.it"]
+CSRF_TRUSTED_ORIGINS = ['https://booking.unito.it']
 
 # Application definition
 
@@ -48,9 +47,11 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware"
 ]
 
 ROOT_URLCONF = "BookingMBC.urls"
@@ -79,8 +80,12 @@ WSGI_APPLICATION = "BookingMBC.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "bookingmbc",
+        'USER': "root",
+        'PASSWORD': "bookimgmbc",
+        'HOST': "db", 
+        'PORT': "3306"
     }
 }
 
@@ -133,3 +138,5 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" 
+STATIC_ROOT = BASE_DIR / "staticfiles"

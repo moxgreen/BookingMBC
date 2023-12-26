@@ -1,0 +1,20 @@
+{% extends "admin/change_list.html" %}
+
+{% block filters %}
+  {# Your custom rendering for filters goes here #}
+  {% for spec in cl.filter_specs %}
+    <div class="custom-filter">
+      <h3>{{ spec.title }}</h3>
+      <div class="custom-filter-options">
+        {% for choice in spec.choices %}
+          {{ choice }}
+          <a href="{{ choice.0|iriencode }}" class="{% if choice.0 == spec.value %}selected{% endif %}">{{ choice.1 }}</a>
+          {% if forloop.counter|divisibleby:3 and not forloop.last %}
+            </div><div class="custom-filter-options">
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  {{ block.super }}
+{% endblock filters %}

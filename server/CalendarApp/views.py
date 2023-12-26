@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from datetime import datetime, timedelta
 from .models import  Booking, Machine
-from UserApp.models import UserProfile
+from UserApp.models import UserProfile, MBCGroup
 from django.shortcuts import  render, HttpResponse, redirect
 from django.http import JsonResponse 
 from django.utils import timezone
@@ -57,7 +57,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
         try:
             u = UserProfile.objects.get(user__username = usn)
             # Get the group name for the user associated with the booking
-            user_group = u.group_name
+            user_group = u.group.group_name
             # Get the affiliation of the user of this booking
             external = UserProfile.objects.get(user__username=usn).is_external
             mb = u.machines_bought
@@ -134,7 +134,7 @@ def download_report_group(request):
 
 def generate_report_dataframe_group(group_name, report_type, start_date, end_date):
     # Get UserProfile instances for the specified group
-    user_profiles = UserProfile.objects.filter(group_name=group_name)
+    user_profiles = UserProfile.objects.filter(group__group_name=group_name)
 
     if report_type == 'userDefinedTime':
         start=datetime.strptime(start_date, '%Y-%m-%d')
@@ -232,7 +232,7 @@ def machines(request):
 
 def reports_view(request):
     # Get distinct group names
-    distinct_groups = UserProfile.objects.values_list('group_name', flat=True).distinct()
+    distinct_groups = MBCGroup.objects.values_list('group_name', flat=True)
 
     context = {'distinct_groups': distinct_groups}
     return render(request, 'CalendarApp/reports_view.html', context)
@@ -291,10 +291,10 @@ def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, 
         formatted_bookings.append(formatted_booking)
     # Convert the list of formatted bookings to a JSON object
     formatted_bookings_json = json.dumps(formatted_bookings, ensure_ascii=False)
-            
+
     context = {
         'username': user.username,
-        'groupname': user_profile.group_name,
+        'groupname': user_profile.group.group_name,
         'facilityname': current_facility,
         'facilities4ThisUser' : facilities4ThisUser,
         'machine2BookName': machine2Book_name,

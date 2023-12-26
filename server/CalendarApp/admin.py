@@ -3,7 +3,7 @@ from django.template.response import TemplateResponse
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from .models import Machine, Booking
-from UserApp.models import UserProfile
+from UserApp.models import UserProfile, MBCGroup
 
 class MachineAdmin(admin.ModelAdmin):
     list_display = ('machine_name', 'facility')  # Display these fields in the admin list view
@@ -25,13 +25,12 @@ class GroupNameFilter(admin.SimpleListFilter):
     parameter_name = 'group_name'
 
     def lookups(self, request, model_admin):
-        return UserProfile.objects.values_list('group_name', 'group_name').distinct()
+        return MBCGroup.objects.values_list('group_name', 'group_name')
 
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(
-                username__in =
-                UserProfile.objects.filter(group_name=self.value()).values_list('user__username', flat=True)
+                group__group_name=self.value()
             )
         return queryset
 
@@ -43,7 +42,7 @@ class BookingAdmin(admin.ModelAdmin):
     def get_group_name(self, obj):
         try:
             user_profile = UserProfile.objects.get(user__username=obj.username)
-            return user_profile.group_name
+            return user_profile.group.group_name
         except UserProfile.DoesNotExist:
             return ''
 
@@ -51,10 +50,8 @@ class BookingAdmin(admin.ModelAdmin):
     #machine_obj.short_description = 'Machine'
 
     def get_group_name_choices(self, request, model_admin):
-        return UserProfile.objects.filter(
-                user__username__in=
-                Booking.objects.values_list('username', flat=True).distinct()
-            ).values_list('group_name', flat=True).distinct()
+        return MBCGroup.objects.values_list('group_name', flat=True)
+
 
     def get_facility_choices(self, request, model_admin):
         return Machine.objects.values_list('facility', flat=True).distinct()

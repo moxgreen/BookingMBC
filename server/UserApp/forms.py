@@ -1,7 +1,7 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django import forms
-from .models import UserProfile
+from .models import UserProfile, MBCGroup
 from CalendarApp.models import Machine
 
 
@@ -11,7 +11,16 @@ class SignUpForm(UserCreationForm):
     email = forms.EmailField(label="", widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Email Address'}))
     first_name = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'First Name'}))
     last_name = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Last Name'}))
-    group_name = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Group Name'}))
+    #group_name = forms.CharField(label="", max_length=100, widget=forms.TextInput(attrs={'class':'form-control', 'placeholder':'Group Name'}))
+
+    # Field for selecting the group
+    group_name = forms.ModelChoiceField(
+        label="Group Name",
+        help_text='<span class="form-text text-muted"><small>Choose one group name.</small></span>',
+        queryset=MBCGroup.objects.all().order_by('group_name'), #all(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
+    )
 
     # Add the radio button for internal and external options
     INTERNAL = 'internal'
@@ -65,22 +74,22 @@ class SignUpForm(UserCreationForm):
         user = super(SignUpForm, self).save(commit=False)
         user.save()
         
-        #now get the UserProfile data
-        group_name = self.cleaned_data.get('group_name')
-        
+        # Get the UserProfile data
+        selected_group = self.cleaned_data.get('group_name')
+        # Get the is_external state
         is_external = self.cleaned_data['access_type']=='external'
-        #print(user.username)
-        #print('self cleaned: ', self.cleaned_data['access_type'])
-        #print('is_external: ', is_external)
-                
         # Handle the 'machines4ThisUser' field and create the ManyToMany relationship
         selected_machines = self.cleaned_data.get('machines_allowed')
 
         # Handle the 'machine2Book' field (corrected field name)
         preferred_machine = self.cleaned_data.get('preferred_machine')
 
-        user_profile = UserProfile(user=user, group_name=group_name)
+        user_profile = UserProfile(user=user)
         user_profile.save()
+        
+        user_profile.group = selected_group
+        if user_profile.group.location == 'NO MBC':
+            is_external = True
         user_profile.machines4ThisUser.set(selected_machines)
         user_profile.preferred_machine_name = preferred_machine.machine_name
         user_profile.is_external = is_external

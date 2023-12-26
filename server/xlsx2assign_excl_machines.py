@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
-# populate_database.py
-
 # populate_database.py
 
 import os
@@ -29,8 +25,6 @@ def populate_database(excel_file_path):
     df=df.astype(object)
     df.fillna('', inplace=True) #fill first with a float64 compatible datatype 
     
-    # Define a mapping for the 'is_open' field
-    #is_open_mapping = {'open': True, 'restricted': False}
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
     
     # Iterate over columns using iteritems
