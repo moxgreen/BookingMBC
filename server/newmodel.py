@@ -7,6 +7,7 @@ import os
 import sys
 import pandas as pd
 import django
+from xlsx2groups import populate_database
 
 from UserApp.models import UserProfile, MBCGroup
 #from CalendarApp.models import Machine
@@ -27,6 +28,7 @@ def populate_xls(excel_filename):
 def populate_model(excel_filename):
     # Read Excel file into a DataFrame
     df = pd.read_excel(excel_filename)
+    error = False
     
     # Iterate through the DataFrame rows and update UserProfile instances
     for index, row in df.iterrows():
@@ -38,7 +40,7 @@ def populate_model(excel_filename):
     
             try:
                 # Try to find MBCGroup based on group_name
-                mbc_group = MBCGroup.objects.get(group_name=gname)
+                mbc_group = MBCGroup.objects.get(group_name__iexact=gname)
     
                 # Update UserProfile's group field
                 user_profile.group = mbc_group
@@ -47,10 +49,15 @@ def populate_model(excel_filename):
                 user_profile.save()
     
             except MBCGroup.DoesNotExist:
-                print(f"Error: MBCGroup with group_name '{gname}' not found.")   
+                print(f"Error: MBCGroup with group_name '{gname}' not found.")
+                error = True
         except UserProfile.DoesNotExist:
             print(f"Error: UserProfile with email '{email}' not found.")
-    print("UserProfiles updated successfully.")
+            error = True
+    if error:
+        print('ended with Errors')
+    else:
+        print("UserProfiles updated successfully.")
     
 
 if __name__ == "__main__":
@@ -73,6 +80,7 @@ if __name__ == "__main__":
     if option == "2excel":
         populate_xls(excel_filename)
     elif option == "2model":
+        populate_database("groups.xlsx")
         populate_model(excel_filename)
     else:
         print("Invalid option. Use '2excel' or '2model'.")
