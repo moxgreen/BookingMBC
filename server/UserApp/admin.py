@@ -13,6 +13,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     get_group_name.short_description = 'Group Name'
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'machines4ThisUser':
+            kwargs['queryset'] = db_field.remote_field.model.objects.order_by('machine_name')
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
 
 class InitialLetterFilter(admin.SimpleListFilter):
     title = _('Initial Letter')
@@ -46,6 +51,10 @@ class MBCGroupAdmin(admin.ModelAdmin):
         
         return response
         
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'machines_bought':
+            kwargs['queryset'] = db_field.remote_field.model.objects.order_by('machine_name')
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 admin.site.register(UserProfile, UserProfileAdmin)

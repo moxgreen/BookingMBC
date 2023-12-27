@@ -57,44 +57,46 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
         try:
             u = UserProfile.objects.get(user__username = usn)
             # Get the group name for the user associated with the booking
-            user_group = u.group.group_name
+            g_name = u.group.group_name
             # Get the affiliation of the user of this booking
-            external = UserProfile.objects.get(user__username=usn).is_external
-            mb = u.machines_bought
+            external = u.is_external
+            mb = u.group.machines_bought
             buyer = False
             #check if the user of this booking has ever bought machines
             if (mb.count() != 0):
                 thisBookedMachine = booking.machine_obj
                 #search if the machine of this booking is present
                 #    in the list of machines bought by the user
-                buyer = u.machines_bought.filter(pk=thisBookedMachine.pk).exists()
+                buyer = u.group.machines_bought.filter(pk=thisBookedMachine.pk).exists()
         except UserProfile.DoesNotExist:
-            user_group=usn+' deleted user'
+            g_name=usn+' deleted user'
             external = buyer = False            
             
-        if buyer:
-            hourly_cost = float(booking.machine_obj.hourly_cost_buyer)
-        else:
-            # Calculate the total cost based on the machine type (assisted or external)
-            if (booking.is_assisted):
-                if external:
-                    cost_field='hourly_cost_external_assisted'
-                else:
-                    cost_field='hourly_cost_assisted'
+        # Calculate the total cost based on the machine type (assisted or external)
+        if (booking.is_assisted):
+            if buyer:
+                cost_field='hourly_cost_buyer_assisted'
+            elif external:
+                cost_field='hourly_cost_external_assisted'
             else:
-                if external:
-                    cost_field='hourly_cost_external'
-                else:
-                    cost_field='hourly_cost'
-            hourly_cost = float(getattr(booking.machine_obj, cost_field))
+                cost_field='hourly_cost_assisted'
+        else:
+            if buyer:
+                cost_field='hourly_cost_buyer'                    
+            elif external:
+                cost_field='hourly_cost_external'
+            else:
+                cost_field='hourly_cost'
+
+        hourly_cost = float(getattr(booking.machine_obj, cost_field))
         
         total_cost = hourly_cost * duration_hours
 
         # Update the dictionary with the cost for the current group
-        if user_group in group_costs:
-            group_costs[user_group] += total_cost
+        if g_name in group_costs:
+            group_costs[g_name] += total_cost
         else:
-            group_costs[user_group] = total_cost
+            group_costs[g_name] = total_cost
     
     # Convert the dictionary to a Pandas DataFrame
     df = pd.DataFrame(list(group_costs.items()), columns=['Group Name', facility])
@@ -166,32 +168,34 @@ def generate_report_dataframe_group(group_name, report_type, start_date, end_dat
             try:
                 # Get the group name for the user associated with the booking
                 external = user_profile.is_external
-                mb = user_profile.machines_bought
+                mb = user_profile.group.machines_bought
                 buyer = False
                 #check if the user of this booking has ever bought machines
                 if (mb.count() != 0):
                     thisBookedMachine = booking.machine_obj
                     #search if the machine of this booking is present
                     #    in the list of machines bought by the user
-                    buyer = user_profile.machines_bought.filter(pk=thisBookedMachine.pk).exists()
+                    buyer = user_profile.group.machines_bought.filter(pk=thisBookedMachine.pk).exists()
             except UserProfile.DoesNotExist:
                 external = buyer = False            
                 
-            if buyer:
-                hourly_cost = float(booking.machine_obj.hourly_cost_buyer)
-            else:
-                # Calculate the total cost based on the machine type (assisted or external)
-                if (booking.is_assisted):
-                    if external:
-                        cost_field='hourly_cost_external_assisted'
-                    else:
-                        cost_field='hourly_cost_assisted'
+            # Calculate the total cost based on the machine type (assisted or external)
+            if (booking.is_assisted):
+                if buyer:
+                    cost_field='hourly_cost_buyer_assisted'
+                elif external:
+                    cost_field='hourly_cost_external_assisted'
                 else:
-                    if external:
-                        cost_field='hourly_cost_external'
-                    else:
-                        cost_field='hourly_cost'
-                hourly_cost = float(getattr(booking.machine_obj, cost_field))
+                    cost_field='hourly_cost_assisted'
+            else:
+                if buyer:
+                    cost_field='hourly_cost_buyer'                    
+                elif external:
+                    cost_field='hourly_cost_external'
+                else:
+                    cost_field='hourly_cost'
+
+            hourly_cost = float(getattr(booking.machine_obj, cost_field))
 
             total_cost = hourly_cost * duration_hours
 
