@@ -34,8 +34,6 @@ def populate_database(excel_file_path):
                 location = row['Affiliation'],
             )
 
-            print(row['Affiliation'], ': ', group.location)
-
             machine_names_string = row['Machine']
             
             if machine_names_string != "" :
