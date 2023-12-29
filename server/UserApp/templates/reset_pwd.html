@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="col-md-6 offset-md-3">
+    <h1>Password Reset</h1>
+    <br/>
+
+    <form method="post" action="{% url 'reset_password' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="username">Username:</label>
+            <input type="username" class="form-control" name="username" required>
+            <br/>
+            <label for="email">Email:</label>
+            <input type="email" class="form-control" name="email" required>
+        </div>
+        <br/>
+        <button type="submit" class="btn btn-primary">Reset Password</button>
+    </form>
+</div>
+{% endblock %}

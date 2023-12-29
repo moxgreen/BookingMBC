@@ -35,6 +35,8 @@ class UserProfile(models.Model):
     preferred_machine_name =  models.CharField(max_length=50)
     is_external = models.BooleanField(default=True, null=True, blank=True)
     
+    password_reset_token = models.CharField(max_length=100, null=True, blank=True)
+    
     def __str__(self):
         return self.user.username
     
