@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<style>
+   #your-checkbox-widget {
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: 0px;
+        padding: 0;
+        gap: 0px;
+   }
+   
+   #your-checkbox-widget .form-check {
+       padding-left:0px;
+   }
+    
+   #your-checkbox-widget .form-check-inline {
+        margin-right: 0px; /* Adjust the margin between checkbox and label */
+   }
+    
+   #your-checkbox-widget label {
+        margin-left: 0px;
+        margin-right: 15px;
+   }
+
+   input[type="checkbox"] {
+        vertical-align: middle;
+   }
+
+</style>
+
+<div class="col-md-6 offset-md-3">
+<h1>Add Services</h1>
+<br/>
+
+<form method="POST" action="">
+	{% csrf_token %}
+	{% if form.errors %}
+			<div class="alert alert-warning alert-dismissible fade show" role="alert">
+			  Your Form Has Errors
+			  {% for field in form %}
+			  	{% if field.errors %}
+			  		{{ field.errors }}
+			  	{% endif %}
+			  {% endfor %}
+			  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+			</div>
+		{% endif %}
+    <div class="container mt-4"
+	{{ form.as_p }}
+    </div>
+	<br/>
+	  <button type="submit" class="btn btn-secondary mb-4">Register</button>
+	</form>
+
+
+
+</div>
+<script></script>
+{% endblock %}
+
