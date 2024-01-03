@@ -12,6 +12,19 @@ from xlsx2groups import populate_database
 from UserApp.models import UserProfile, MBCGroup
 #from CalendarApp.models import Machine
 
+fixed = {
+    "Brusco": 'Brusco (Genetica Medica e malattie rare)',
+    "Staff": "BookingMBCStaff",
+    "Coscia (Ematologia Traslazionale)":""
+}
+
+def fix_group_name(group_name):
+    g = MBCGroup.objects.filter(group_name__icontains=group_name)
+    if (len(g)==1):
+        return g[0].group_name
+    print(f"Group name: {group_name} - found: {len(g)}")
+
+
 def populate_xls(excel_filename):
     user_profiles = UserProfile.objects.all()
     
@@ -40,6 +53,7 @@ def populate_model(excel_filename):
     
             try:
                 # Try to find MBCGroup based on group_name
+                gname = fix_group_name(gname)
                 mbc_group = MBCGroup.objects.get(group_name__iexact=gname)
     
                 # Update UserProfile's group field
