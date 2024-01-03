@@ -15,6 +15,7 @@ class MBCGroup(models.Model):
     
     group_name = models.CharField(max_length=100, null=True, blank=True)
     machines_bought = models.ManyToManyField(Machine, related_name='machines_bought', blank=True)
+
     MBC_CHOICES = [
         ('MBC1', 'MBC1'),
         ('MBC2', 'MBC2'),
@@ -29,11 +30,11 @@ class MBCGroup(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     group = models.ForeignKey(MBCGroup, null=True, on_delete=models.SET_NULL)
-    #group_name = models.CharField(max_length=100)
     machines4ThisUser = models.ManyToManyField(Machine, related_name='machines4ThisUser', blank=True)
-    #machines_bought = models.ManyToManyField(Machine, related_name='machines_bought', blank=True)
     preferred_machine_name =  models.CharField(max_length=50)
     is_external = models.BooleanField(default=True, null=True, blank=True)
+    
+    password_reset_token = models.CharField(max_length=100, null=True, blank=True)
     
     def __str__(self):
         return self.user.username
