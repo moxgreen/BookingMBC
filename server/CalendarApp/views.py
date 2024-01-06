@@ -110,7 +110,7 @@ def download_report_group(request):
     start_date = request.GET.get('startDateGroup')
     end_date = request.GET.get('endDateGroup')
     group_name = request.GET.get('groupName')
-    print('groupName', group_name, 'type: ', report_type, 'start: ', start_date, 'end: ', end_date)
+    #print('groupName', group_name, 'type: ', report_type, 'start: ', start_date, 'end: ', end_date)
     
     if group_name == "Select Group":
             messages.error(request, "Please select an item from the dropdown menu.")
@@ -247,17 +247,23 @@ def calendar_view(request):
     user_profile = UserProfile.objects.get(user=user)
 
     machine2Book_name = str(user_profile.preferred_machine_name)
+    machine2Book_obj = Machine.objects.get(machine_name=machine2Book_name)
+    current_facility = machine2Book_obj.facility
+    machine2Book_timelimit = machine2Book_obj.max_booking_duration
+    #line to remove when database is updated
+    if (machine2Book_timelimit == None): machine2Book_timelimit = 0
+    
     machines_allowed = user_profile.machines4ThisUser.all()
-    current_facility = Machine.objects.get(machine_name=machine2Book_name).facility
+    #now prepare 2 lists of strings
     facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
     otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
     
-    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, machine2Book_timelimit, otherMachinesInCurrentFacility)
     context['facility_usage_dict'] = calculate_percentage_of_workingday(user_profile, current_facility, timezone.now())
     return render(request, 'CalendarApp/week_view.html', context)
 
 
-def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility):
+def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility):
     current_datetime = timezone.now()    
     days = get_previous_sunday_and_next_saturday(current_datetime)
     #three_months_later_datetime = current_datetime + timedelta(days=90)  # Assuming 30 days per month
@@ -296,12 +302,14 @@ def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, 
     # Convert the list of formatted bookings to a JSON object
     formatted_bookings_json = json.dumps(formatted_bookings, ensure_ascii=False)
 
+    #print('JSON formatting timelimit: ', timelimit, ' timelimit string:', str(timelimit))
     context = {
         'username': user.username,
         'groupname': user_profile.group.group_name,
         'facilityname': current_facility,
         'facilities4ThisUser' : facilities4ThisUser,
         'machine2BookName': machine2Book_name,
+        'timelimit' : str(timelimit),
         'otherMachinesInCurrentFacility': otherMachinesInCurrentFacility,
         'formatted_bookings_json': formatted_bookings_json,
     }
@@ -357,11 +365,12 @@ def del_booking(request):
         )
     if b.count() == 1 :
         booking=b.get()
-        print("booking DELETED: ", booking)
+        #print("booking DELETED: ", booking)
         booking.delete()
+        return JsonResponse({"status": "success"})
     else:
-        print("delete failed")    
-    return JsonResponse({"status": "success"})
+        #print("delete failed")    
+        return JsonResponse({"status": "error"})
 
 
 def move_booking(request):    
@@ -373,8 +382,8 @@ def move_booking(request):
     newEnd = datetime.strptime(newEndStr, "%Y-%m-%dT%H:%M:%S%z")
     oldStartStr = request.GET.get("oldStart", None)
     oldStart = datetime.strptime(oldStartStr, "%Y-%m-%dT%H:%M:%S%z")
-    print("newStartStr: ", newStartStr, " newStart: ", newStart, " newEndStr: ", newEndStr,
-          " oldStartStr: ", oldStartStr, " oldStart: ", oldStart)
+    #print("newStartStr: ", newStartStr, " newStart: ", newStart, " newEndStr: ", newEndStr,
+    #     " oldStartStr: ", oldStartStr, " oldStart: ", oldStart)
     
     # Retrieve the Booking object
     usn=request.user.username
@@ -394,59 +403,79 @@ def move_booking(request):
 
 def next_machine(request):
     current_machine_name = str(request.GET.get("currmachine", None))
+    current_machine = Machine.objects.get(machine_name=current_machine_name)
     user = request.user
     user_profile = UserProfile.objects.get(user=user)
 
     machines_allowed = user_profile.machines4ThisUser.all()
-    current_facility = Machine.objects.get(machine_name=current_machine_name).facility
+    current_facility = current_machine.facility
     facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
     otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
 
     current_index = otherMachinesInCurrentFacility.index(current_machine_name)
     next_index = (current_index + 1) % len(otherMachinesInCurrentFacility)
     machine2Book_name = otherMachinesInCurrentFacility[next_index]
+    next_machine_obj = Machine.objects.get(machine_name=machine2Book_name)
+    timelimit = next_machine_obj.max_booking_duration
+    #print('next_machine->machine2Book_name: ', machine2Book_name)
+    #print('next_machine->timelimit', timelimit)
     
-    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    #line to remove when database is updated:
+    if (timelimit == None): timelimit = 0
+
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility)
     #return render(request, 'CalendarApp/week_view.html', context)
     json_data = json.dumps(context, ensure_ascii=False)
-
     return JsonResponse(json_data, safe=False)
 
 
 def previous_machine(request):
     current_machine_name = str(request.GET.get("currmachine", None))
+    current_machine = Machine.objects.get(machine_name=current_machine_name)
     user = request.user
     user_profile = UserProfile.objects.get(user=user)
 
     machines_allowed = user_profile.machines4ThisUser.all()
-    current_facility = Machine.objects.get(machine_name=current_machine_name).facility
+    current_facility = current_machine.facility
     facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
     otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
 
     current_index = otherMachinesInCurrentFacility.index(current_machine_name)
     next_index = (current_index - 1) % len(otherMachinesInCurrentFacility)
     machine2Book_name = otherMachinesInCurrentFacility[next_index]
+    previous_machine_obj = Machine.objects.get(machine_name=machine2Book_name)
+    timelimit = previous_machine_obj.max_booking_duration
+    #print('previous_machine->machine2Book_name: ', machine2Book_name)
+    #print('previous_machine->timelimit', timelimit)
+        
+    #line to remove when database is updated:
+    if (timelimit == None): timelimit = 0
     
-    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
-    #return render(request, 'CalendarApp/week_view.html', context)
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility)
     json_data = json.dumps(context, ensure_ascii=False)
-
     return JsonResponse(json_data, safe=False)
 
 
 def select_machine(request):
     machine2Book_name = str(request.GET.get("selecteditem", None))
+    current_machine = Machine.objects.get(machine_name=machine2Book_name)
     user = request.user
     user_profile = UserProfile.objects.get(user=user)
 
     machines_allowed = user_profile.machines4ThisUser.all()
-    current_facility = Machine.objects.get(machine_name=machine2Book_name).facility
+    current_facility = current_machine.facility
     facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
     otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
+    timelimit = current_machine.max_booking_duration
+    #print('select_machine->machine2Book_name: ', machine2Book_name)
+    #print('select_machine->timelimit', timelimit)
     
-    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    #line to remove when database is updated:
+    if (timelimit == None): timelimit = 0
+    
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility)
     json_data = json.dumps(context, ensure_ascii=False)
-
     return JsonResponse(json_data, safe=False)
 
 
@@ -461,14 +490,21 @@ def select_facility(request):
     facilities4ThisUser = [m for m in set(str(machine.facility) for machine in machines_allowed)]
     otherMachinesInCurrentFacility = [str(machine.machine_name) for machine in machines_allowed if machine.facility == current_facility]
     machine2Book_name = otherMachinesInCurrentFacility[0] #arbitraly select the machine in pos[0] to start with
+    current_machine = Machine.objects.get(machine_name=machine2Book_name)
+    timelimit = current_machine.max_booking_duration
+    #print('select_facility->machine2Book_name: ', machine2Book_name)
+    #print('select_facility->timelimit', timelimit)
+
+    #line to remove when database is updated:
+    if (timelimit == None): timelimit = 0
     
+
     usage_dict = calculate_percentage_of_workingday(user_profile, current_facility, date)
     
-    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, otherMachinesInCurrentFacility)
+    context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility)
     context['usage_dict'] = usage_dict
     
     json_data = json.dumps(context, ensure_ascii=False)
-
     return JsonResponse(json_data, safe=False)
 
 

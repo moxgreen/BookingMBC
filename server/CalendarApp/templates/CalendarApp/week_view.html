@@ -23,6 +23,7 @@
      <div id="currmachine" data-currmachine="{{ machine2BookName }}"></div>
      <div id="facilities4ThisUser" data-facilities4ThisUser="{{ facilities4ThisUser }}"></div>
      <div id="otherMachinesInCurrentFacility" data-otherMachinesInCurrentFacility="{{ otherMachinesInCurrentFacility }}"></div>
+     <div id="timelimit" data-timelimit="{{ timelimit }}"></div>
      
       <div id='calendar-month'></div>
       
@@ -42,18 +43,18 @@
                     {% for mname in otherMachinesInCurrentFacility %}
                         <li><a class="dropdown-item" href="#" data-itemname="{{ mname }}">{{ mname }}</a></li>
                     {% endfor %}
-                </ul>
+              </ul>
             </div>
             
             <div class="btn-group" id='drpdown-facilities' rele="group" aria-label="facilities">
-                  <button class="btn btn-dark dropdown-toggle" id="facilitiesdropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Facilities
-                  </button>
-                  <ul class="dropdown-menu" id="facilities-list">
-                        {% for fname in facilities4ThisUser %}
-                            <li><a class="dropdown-item" href="#" data-facility="{{ fname }}">{{ fname }}</a></li>
-                        {% endfor %}
-                    </ul>
+                <button class="btn btn-dark dropdown-toggle" id="facilitiesdropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Facilities
+                </button>
+                <ul class="dropdown-menu" id="facilities-list">
+                      {% for fname in facilities4ThisUser %}
+                          <li><a class="dropdown-item" href="#" data-facility="{{ fname }}">{{ fname }}</a></li>
+                      {% endfor %}
+                </ul>
             </div>
             
       </div>

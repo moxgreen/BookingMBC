@@ -6,6 +6,7 @@ $(document).ready(function() {
     var fname = $('#facility').data('facility');
     var gname = $('#groupname').data('groupname');
     var cmach = $('#currmachine').data('currmachine');
+    var maxbt = $('#timelimit').data('timelimit');
     var selected;
 
     // Using delegation for the 'shown.bs.modal' event
@@ -53,33 +54,38 @@ $(document).ready(function() {
        
         // a new booking is requested
         select: function(info) {
-            // Show the modal
-            selected=info;
-            console.log("testing past");
-            var nowDate = new Date();
+            // Prepare to show the modal form asking for more details
+            selected=info; // use global variable for future access to this data
+            let nowDate = new Date();
             // Check if the event's start time is in the past
             if (info.start < nowDate) {
                 calendarWeek.unselect();
                 return false;
             }
-            console.log("calling the modal");
+            // Check if the time selected is larger than maxTime for this machine
+            if ( !isWithinTimeLimits(info.start, info.end) ) {
+                alert('This service cannot be booked for longer than ' + maxbt + " minutes");
+                calendarWeek.unselect();
+                return false;            
+            }
+            //ok now finally show the modal form
             $('#bookingFormModal').modal('show');
             
             $('#saveChangesBtn').on('click', function() {
                 // Your save changes logic...
                 var title = $('#titleInput').val();
                 var assistance = $('input[name="assistance"]:checked').val();
-                console.log("title: " + title + " assistance: " + assistance)
+                //console.log("title: " + title + " assistance: " + assistance)
 
                 if (!title) {
                     // Handle the Cancel scenario (no text provided or modal closed without saving)
-                    console.log("NO title unselect calendar");
+                    //console.log("NO title close modal and unselect calendar");
                     calendarWeek.unselect();
                     $('#bookingFormModal').modal('hide');
                     return;
                 }
                 
-                // Create new event with the obtained values
+                // Create new event to send via ajax GET with the obtained values
                 var newEvent = {
                     currentmachine: $('#currmachine').data('currmachine'),
                     title: gname + "\/" + uname + ": " + title,
@@ -130,6 +136,12 @@ $(document).ready(function() {
                   changeInfo.revert();
                   alert("You cannot drag the event to the past!");
                   return false;
+              }
+              // Check if the time selected is larger than maxTime for this machine
+              if ( !isWithinTimeLimits(changeInfo.start, changeInfo.end) ) {
+                    changeInfo.revert();
+                    alert('This service cannot be booked for longer than ' + maxbt + " minutes");
+                    return false;            
               }
 
               var newStartStr =  changeInfo.event.startStr;
@@ -247,7 +259,7 @@ $(document).ready(function() {
 
 
 
-    /*********** machines usage table ***********/
+    /*********** machines percent of usage table ***********/
     
     // Handle click event for the calendar buttons
     $('#calendar-week .fc-next-button').on('click', function(){
@@ -300,6 +312,7 @@ function changefacility(calendar, itemname) {
             $('#change_machine h3:first').text('Booking: ' + responseObject.machine2BookName);
             $('#currmachine').data('currmachine', responseObject.machine2BookName);
             $('#facility').data('facility', responseObject.facilityname);
+            $('#timelimit').data('timelimit', responseObject.timelimit);
             $('#change_machine h3:eq(1)').text('from the ' + responseObject.facilityname + ' facility');
             
             //update the list of dropdown menus
@@ -319,7 +332,7 @@ function changefacility(calendar, itemname) {
             updateTableContent(responseObject.usage_dict);
         },
         error: function (response) {
-            alert('Next button has a problem!!!');
+            alert('Change facility button has a problem!!!');
         }
     }); //ajax
    
@@ -330,6 +343,7 @@ function changemachine(calendar, direction, itemname='') {
     // clear old bookings for the previous machine and fetch the next with its bookings
     calendar.removeAllEvents();
     cmach = $('#currmachine').data('currmachine');
+
     var currmac  = {
         currmachine:  cmach,
         selecteditem: itemname,
@@ -347,18 +361,19 @@ function changemachine(calendar, direction, itemname='') {
    
             $('#change_machine h3:first').text('Booking: ' + responseObject.machine2BookName);
             $('#currmachine').data('currmachine', responseObject.machine2BookName);
+            $('#timelimit').data('timelimit', responseObject.timelimit);
             calendar.setOption('events', calendarevents);
             calendar.unselect();
         },
         error: function (response) {
-              alert('Next button has a problem!!!');
+              alert('change machine button has a problem!!!');
         }
     }); //ajax
 };
 
 
 
-/*********** machines usage table ***********/
+/*********** machines % of usage HTML table ***********/
 
 function updateTable(start) {
     //fecth updated values from server
@@ -434,4 +449,24 @@ function get3MonthsRange(nowDate) {
     };
 };
 
+function getDiffInMins(start, end) {
+    let timeDifference = end - start;
+    // Convert milliseconds to minutes
+    return parseInt(timeDifference / (1000 * 60));
+}
 
+function isWithinTimeLimits(start,end) {
+    // Check if the time selected is larger than maxTime for this machine
+    maxbt = parseInt($('#timelimit').data('timelimit'));
+    if (maxbt == 0) {
+    // if maxbt == 0 there is no time constraint
+        return true;    
+    }
+    let duration = getDiffInMins(start, end);
+    if ( duration > maxbt) {
+        //duration exceeds limits
+        return false;            
+    }
+    // duration allowed!
+    return true;
+}

@@ -1,0 +1,28 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+
+a.myaddlink {
+    text-transform: uppercase;
+    background-color: #747474;
+    color: white; /* Optional: Set text color to make it readable on a black background */
+    padding: 5px 10px; /* Optional: Add padding for better aesthetics */
+    text-decoration: none; /* Optional: Remove default underline style */
+    border-radius : 15px;
+}
+
+a.myaddlink:hover {
+    background-color: black;
+}
+
+
+</style>
+
+
+<a href="upload-excel/" class="myaddlink">Upload an Excel file</a>
+<a href="download-excel/" class="myaddlink">Download machines.xlsx Excel file</a>
+
+{{ block.super }}
+{% endblock %}
