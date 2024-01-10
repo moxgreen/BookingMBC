@@ -60,7 +60,7 @@ class UserProfileAdmin(admin.ModelAdmin):
         if request.method == "POST":
             excel_file = request.FILES.get("excel_upload")
             # Call the function to clear machines4ThisUser for all users
-            clear_machines_for_all_users()
+            #clear_machines_for_all_users()
 
             if not excel_file.name.endswith(('.xls', '.xlsx')):
                 messages.warning(request, 'The wrong file type was uploaded')
@@ -94,14 +94,14 @@ class UserProfileAdmin(admin.ModelAdmin):
                             usp.machines4ThisUser.add(m)
                             usp.save()
                         except UserProfile.DoesNotExist:
-                            print(f"  email: {ema} not registered")
+                            messages.error(f"  email not registered: {ema}")
                             continue
                         except Machine.DoesNotExist:
-                            print(f"  machine: {mn} not existent")
+                            messages.error(f"  machine not existent: {mn}")
                             continue                            
                         except IntegrityError as e:
-                            print(f"Error {e} processing email: {ema}")
-
+                            messages.error(f"Error {e} processing email: {ema}")
+                            continue
                 messages.success(request, 'Excel file uploaded successfully')
                 return HttpResponseRedirect(request.path_info)
 
