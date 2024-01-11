@@ -58,39 +58,40 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     def upload_excel(self, request):
         if request.method == "POST":
+            print("POST")
             excel_file = request.FILES.get("excel_upload")
             # Call the function to clear machines4ThisUser for all users
             clear_machines_for_all_users()
-
             if not excel_file.name.endswith(('.xls', '.xlsx')):
                 messages.warning(request, 'The wrong file type was uploaded')
                 return HttpResponseRedirect(request.path_info)
-
             try:
                 # Read the Excel file into a DataFrame
                 df = pd.read_excel(excel_file)
 
                 df=df.astype(object)
                 df.fillna('', inplace=True) #fill first with a float64 compatible datatype 
-                
                 email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
                 
                 # Iterate over columns using iteritems
                 for mn in df.columns:
-                    #print(f"Machine: {mn}")
+                    print(f"Machine: {mn}")
                     
                     # Iterate over rows for each column
                     for s in df[mn]:
+                        if not (s is not None and len(s)>0 and s != "None"):
+                            continue
                         # Use re.search to find the first email address in the input string
                         match = re.search(email_pattern, s)
-                        
                         # If a match is found, return the extracted email address; otherwise, return None
-                        ema = match.group() if match else ""
-                        if ema == "": continue
-                        #print(f"  User email: {ema}")
+                        if match:
+                            ema = match.group()
+                        else:
+                            continue
                         try:
                             usp=UserProfile.objects.get(user__email=ema)
                             m=Machine.objects.get(machine_name=mn)
+                            print(m)
                             usp.machines4ThisUser.add(m)
                             usp.save()
                         except UserProfile.DoesNotExist:
@@ -101,11 +102,15 @@ class UserProfileAdmin(admin.ModelAdmin):
                             continue                            
                         except IntegrityError as e:
                             print(f"Error {e} processing email: {ema}")
-
+                            continue
+                        except Exception as e:
+                            print("Exception")
+                            print(e)
+                            continue
                 messages.success(request, 'Excel file uploaded successfully')
                 return HttpResponseRedirect(request.path_info)
-
             except Exception as e:
+                print("G")
                 messages.error(request, f'Error processing the Excel file: {e}')
                 return HttpResponseRedirect(request.path_info)
 

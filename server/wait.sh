@@ -7,4 +7,5 @@ while ! nc -z db 3306 ; do
 done
 python manage.py makemigrations
 python manage.py migrate
+export PYTHONMALLOC=debug
 gunicorn --bind 0.0.0.0:8001 BookingMBC.wsgi
