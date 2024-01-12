@@ -77,13 +77,12 @@ class UserProfileAdmin(admin.ModelAdmin):
                 
                 # Iterate over columns using iteritems
                 for mn in df.columns:
-                    print(f"Machine: {mn}")
+                    #print(f"Machine: {mn}")
                     
                     # Iterate over rows for each column
                     for s in df[mn]:
                         # Use re.search to find the first email address in the input string
                         match = re.search(email_pattern, s)
-                        error=""
                         # If a match is found, return the extracted email address; otherwise, return None
                         ema = match.group() if match else ""
                         if ema == "": continue
@@ -91,25 +90,24 @@ class UserProfileAdmin(admin.ModelAdmin):
                         try:
                             usp=UserProfile.objects.get(user__email=ema)
                         except UserProfile.DoesNotExist:
-                            error += f"  email not registered: {ema}; "
+                            #print(f"  email not registered: {ema}")
                             continue
                         try:
                             m=Machine.objects.get(machine_name=mn)
                         except Machine.DoesNotExist:
-                            error += f"  machine not existent: {mn}; "
+                            #print(f"  machine not existent: {mn}")
                             continue                            
                         try:
                             usp.machines4ThisUser.add(m)
                             usp.save()
                         except IntegrityError as e:
-                            error += f"Error {e} processing machines for {ema}; "
-                            continue
-                messages.success(request, 'Excel file uploaded successfully' \
-                                 + f" with the following warnings {error}" if error != "" else "")
+                            messages.error(request, f'Error {e} processing machines for {ema}')
+                            return HttpResponseRedirect(request.path_info)
+                messages.success(request, 'Excel file uploaded successfully')
                 return HttpResponseRedirect(request.path_info)
 
             except Exception as e:
-                messages.error(request, f'Error processing the Excel file: {e}')
+                messages.error(request, f'Error opening the Excel file: {e}')
                 return HttpResponseRedirect(request.path_info)
 
         form = UserExcelImportForm()  # Assume you have a form for file uploads
