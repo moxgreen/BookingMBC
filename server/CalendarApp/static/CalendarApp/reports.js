@@ -40,14 +40,9 @@ $(document).ready(function() {
         
         // Serialize the data for the URL
         var url = 'download_report_group/?' + $.param(queryParams);
+        window.open(url, '_blank');
         // Redirect to the constructed URL
-        window.location.href = url;
-        
-        // Wait for a few seconds before redirecting to 'reports_view'
-        setTimeout(function() {
-            var url = 'reports_view';
-            window.location.href = url;
-        }, 1000); // Adjust the delay time as needed        
+  
     });  //downloadReportGroup
 
 
@@ -65,14 +60,8 @@ $(document).ready(function() {
                 
         // Serialize the data for the URL
         var url = 'download_report_facilities/?' + $.param(queryParams);
-        // Redirect to the constructed URL
-        window.location.href = url;
-        
-        // Wait for a few seconds before redirecting to 'reports_view'
-        setTimeout(function() {
-            var url = 'reports_view';
-            window.location.href = url;
-        }, 1000); // Adjust the delay time as needed        
+        console.log(url);
+        window.open(url, '_blank');
     });  //downloadReportFacilities
 
 }); //$(document)

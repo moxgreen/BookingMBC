@@ -6,7 +6,7 @@
 
 a.myaddlink {
     position: relative;
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
     background-color: #747474;
     color: white; /* Optional: Set text color to make it readable on a black background */
     padding: 5px 10px; /* Optional: Add padding for better aesthetics */
@@ -36,9 +36,19 @@ a.myaddlink:hover {
 
 </style>
 
+<a href="upload-users/" class="myaddlink"
+   title="Upload an Excel file with UserProfile data as columns but no permitted machines">
+   Upload users</a>
+<a href="download-users/" class="myaddlink" 
+   title="Download an Excel file with UserProfile data as columns but no permitted machines">
+   Download users</a>
 
-<a href="upload-excel/" class="myaddlink" title="Upload an Excel file with machine_name as columns and user emails as rows & assign users to machines, CLEARS ALL VALUES">Upload Excel</a>
-<a href="download-excel/" class="myaddlink" title="Download machines4users.xlsx">Download Excel</a>
+<a href="upload-permissions/" class="myaddlink"
+   title="Upload an Excel file with machine_name as columns and user emails as rows & assign users to machines">
+   Upload permissions</a>
+<a href="download-permissions/" class="myaddlink"
+   title="Download machines4users.xlsx">
+   Download permissons</a>
 
 {{ block.super }}
 {% endblock %}
