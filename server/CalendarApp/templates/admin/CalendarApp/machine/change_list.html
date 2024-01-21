@@ -5,7 +5,9 @@
 <style>
 
 a.myaddlink {
-    text-transform: uppercase;
+    position: relative;
+    top: -12px; left: 4px;
+    /* text-transform: uppercase; */
     background-color: #747474;
     color: white; /* Optional: Set text color to make it readable on a black background */
     padding: 5px 10px; /* Optional: Add padding for better aesthetics */
@@ -17,12 +19,29 @@ a.myaddlink:hover {
     background-color: black;
 }
 
+.myaddlink::after {
+    content: attr(title);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: *#ffffcc; Light yellow background color */
+    padding: 5px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.2s ease;
+}
 
 </style>
 
 
-<a href="upload-excel/" class="myaddlink">Upload an Excel file</a>
-<a href="download-excel/" class="myaddlink">Download machines.xlsx Excel file</a>
+<a href="upload-excel/" class="myaddlink"
+    title="Upload an Excel file with machines and thier attributes as rows">
+    Upload Machines</a>
+<a href="download-excel/" class="myaddlink"
+    title="Download an Excel file named machines.xlsx with the list of machines and their attributes">
+    Download Machines</a>
 
 {{ block.super }}
 {% endblock %}

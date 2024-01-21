@@ -81,6 +81,7 @@ class UserProfileAdmin(admin.ModelAdmin):
                     username = row['user name']
                     first_name = row['first fname']
                     last_name = row['last name']
+                    group = row['group']
                     email = row['email']
                     preferred_machine_name = row['preferred machine']
                     is_external = row['external']
@@ -92,6 +93,7 @@ class UserProfileAdmin(admin.ModelAdmin):
                         # Update UserProfile instance
                         user_profile.user.first_name = first_name
                         user_profile.user.last_name = last_name
+                        user_profile.user.group = group
                         user_profile.user.email = email
                         user_profile.preferred_machine_name = preferred_machine_name
                         user_profile.is_external = is_external
@@ -136,6 +138,7 @@ class UserProfileAdmin(admin.ModelAdmin):
                 'user name' : user_profile.user.username,
                 'first fname' : user_profile.user.first_name,
                 'last name' : user_profile.user.last_name,
+                'group' : user_profile.group,
                 'email' : user_profile.user.email,
                 'preferred machine' :  user_profile.preferred_machine_name,
                 'external' : user_profile.is_external,

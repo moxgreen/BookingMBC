@@ -1,0 +1,32 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+{% block content %}
+<style>
+
+.myaddlink, #id_excel_upload {
+    position: relative;
+    top: 5px; left: 4px;
+    /* text-transform: uppercase; */
+    background-color: #747474;
+    color: white; /* Optional: Set text color to make it readable on a black background */
+    padding: 5px 10px; /* Optional: Add padding for better aesthetics */
+    text-decoration: none; /* Optional: Remove default underline style */
+    border-radius : 15px;
+}
+
+.myaddlink:hover, #id_excel_upload:hover {
+    background-color: black;
+}
+
+
+</style>
+
+    <div>
+        <form action="." method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="myaddlink" type="submit">Upload File</button>
+
+        </form>
+    </div>
+{% endblock %}

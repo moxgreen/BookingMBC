@@ -1,6 +1,5 @@
 
 $(document).ready(function() {
-//document.addEventListener('DOMContentLoaded', function () {
     var formattedBookingsData = $('#formatted-bookings-data').data('json');
     var uname = $('#username').data('username');
     var fname = $('#facility').data('facility');
@@ -48,10 +47,13 @@ $(document).ready(function() {
           center: 'title',
           right: 'prev,today,next timeGridWeek,timeGridDay'
         },
-
+                
+        dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'short' },
+        
         // constrain to a discrete range: from today to 3 months later
         validRange: get3MonthsRange(new Date()), // Pass the current date to the function
-       
+
+
         // a new booking is requested
         select: function(info) {
             // Prepare to show the modal form asking for more details
@@ -126,9 +128,8 @@ $(document).ready(function() {
         }, //select
         
 
-        eventChange: function(changeInfo) {
         //drag/resize an event
-
+        eventChange: function(changeInfo) {
               var nowDate = new Date();
               // Check if the event's start time is in the past
               if (changeInfo.event.start < nowDate) {
@@ -210,7 +211,7 @@ $(document).ready(function() {
 
     calendarMonth.render();
     calendarWeek.render();
-    
+    setTitle(calendarWeek);
 
     // Store references to the calendar instances for later use
     var calendars = {
@@ -259,26 +260,40 @@ $(document).ready(function() {
 
 
 
-    /*********** machines percent of usage table ***********/
+/********************** machines percent of usage table **********************/
+
+/**************** Handle click event for the calendar buttons ****************/
     
     // Handle click event for the calendar buttons
     $('#calendar-week .fc-next-button').on('click', function(){
         var sun = calendars.week.currentData.currentDate.toISOString();
         updateTable(sun);
+        setTitle(calendarWeek)
     });
     
-    // Handle click event for the calendar buttons
     $('#calendar-week .fc-prev-button').on('click', function(){
         var sun = calendars.week.currentData.currentDate.toISOString();
         updateTable(sun);
+        setTitle(calendarWeek)
     });
 
-    // Handle click event for the calendar buttons
     $('#calendar-week .fc-today-button').on('click', function(){
         var sun = calendars.week.currentData.currentDate.toISOString();
         updateTable(sun);
+        setTitle(calendarWeek)
     });
 
+    //WEEK button
+    $('#calendar-week .fc-timeGridWeek-button').on('click', function(){
+        setTitle(calendarWeek)
+    });
+
+    //DAY button
+    $('#calendar-week .fc-timeGridDay-button').on('click', function(){
+        setTitle(calendarWeek)
+    });
+    
+    
 }); //$(document)
 
 
@@ -327,7 +342,7 @@ function changefacility(calendar, itemname) {
                 dropdownMenu.append(li_item);
             }
             calendar.setOption('events', calendarevents);
-            calendar.unselect();
+            setTitle(calendar);
 
             updateTableContent(responseObject.usage_dict);
         },
@@ -342,6 +357,7 @@ function changefacility(calendar, itemname) {
 function changemachine(calendar, direction, itemname='') {
     // clear old bookings for the previous machine and fetch the next with its bookings
     calendar.removeAllEvents();
+    //calendar.destroy();
     cmach = $('#currmachine').data('currmachine');
 
     var currmac  = {
@@ -359,11 +375,14 @@ function changemachine(calendar, direction, itemname='') {
             var responseObject = JSON.parse(response);
             var calendarevents = JSON.parse(responseObject.formatted_bookings_json);
    
+            //console.log("changing calendar to: " +  responseObject.machine2BookName);
+            //console.log(calendarevents)
+            
             $('#change_machine h3:first').text('Booking: ' + responseObject.machine2BookName);
             $('#currmachine').data('currmachine', responseObject.machine2BookName);
             $('#timelimit').data('timelimit', responseObject.timelimit);
             calendar.setOption('events', calendarevents);
-            calendar.unselect();
+            setTitle(calendar);
         },
         error: function (response) {
               alert('change machine button has a problem!!!');
@@ -371,6 +390,53 @@ function changemachine(calendar, direction, itemname='') {
     }); //ajax
 };
 
+
+/***************** set calendarWeek title *************/
+
+function setTitle(calendar) {
+    // Access the current startDate and endDate
+    let currentDate = calendar.currentDataManager.data.calendarApi.currentData.dateProfile.currentRange;
+    //console.log(currentDate);
+    let view = calendar.view;
+    let title="";
+
+    if (view.type === 'timeGridWeek') {
+        let startRangeDate = currentDate.start;
+        //avoid modifying referenced objects received from currentDataManager or currentData     
+        let endRangeDate = new Date(currentDate.end); 
+        // Subtract one day to endDate as FullCalendar range is exclusive
+        endRangeDate.setDate(endRangeDate.getDate() - 1);
+        
+        // Format the start and end dates
+        let formattedStartDate = startRangeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        let formattedEndDate = endRangeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        
+        // Construct the desired string
+        let dateRangeString = `${formattedStartDate} - ${formattedEndDate}`;
+        title="<b>"+$('#currmachine').data('currmachine')+"</b> " + dateRangeString
+    }
+    else {
+        let startRangeDate = currentDate.start;
+        let formattedStartDate = startRangeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        title="<b>"+$('#currmachine').data('currmachine')+"</b> " + formattedStartDate    
+    }
+
+    $("#fc-dom-86").html(title);
+
+    return;
+            /*
+            //old code
+            calendar.setOption('titleFormat', (info) => {
+                      //console.log("showing calendar: " + $('#currmachine').data('currmachine'));
+
+                      console.log(info);
+                      const startMonth = info.start.marker.toLocaleDateString('en-US', { month: 'short' });
+                      const endMonth = info.end.marker.toLocaleDateString('en-US', { month: 'short' });
+                      return `booking: ______ ${$('#currmachine').data('currmachine')} ______ week: ${startMonth} ${info.start.day} - ${endMonth} ${info.end.day}, ${info.start.year}`;
+                    });
+            */
+
+}
 
 
 /*********** machines % of usage HTML table ***********/
@@ -390,7 +456,7 @@ function updateTable(start) {
         dataType: "json",
         success: function(data) {
             // Update the table content based on the received data
-            console.log(data)
+            //console.log(data)
             updateTableContent(data);
         },
         error: function(error) {
@@ -433,6 +499,7 @@ function updateTableContent(updatedData) {
 function updateWeekCalendar(calendar, selectedDate) {
     // Update the week calendar to show the selected day
     calendar.gotoDate(selectedDate);
+    setTitle(calendar);
 };    
 
 function get3MonthsRange(nowDate) {

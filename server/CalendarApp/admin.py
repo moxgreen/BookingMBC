@@ -140,11 +140,19 @@ class GroupNameFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(
+            # Step 1: Filter UserProfile records
+            user_profiles = UserProfile.objects.filter(
                 group__group_name=self.value()
             )
+    
+            # Step 2: Get usernames from filtered UserProfiles
+            usernames = user_profiles.values_list('user__username', flat=True)
+    
+            # Step 3: Filter Booking records based on obtained usernames
+            return queryset.filter(username__in=usernames)
+    
         return queryset
-
+    
 
 ###############################################################################
 #                                 BookingAdmin                                #
