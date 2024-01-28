@@ -421,6 +421,7 @@ function changemachine(calendar, direction, itemname='') {
 };
 
 
+
 /***************** set calendarWeek title *************/
 
 function setTitle(calendar) {
@@ -552,6 +553,7 @@ function get4MonthsRange(nowDate) {
     };
 };
 
+
 function get3MonthsRange(nowDate) {
     // Calculate the start of the week (Sunday) for the current date
     var startDate = new Date(nowDate);
@@ -566,11 +568,13 @@ function get3MonthsRange(nowDate) {
     };
 };
 
+
 function getDiffInMins(start, end) {
     let timeDifference = end - start;
     // Convert milliseconds to minutes
     return parseInt(timeDifference / (1000 * 60));
 }
+
 
 function isWithinTimeLimits(start,end) {
     // Check if the time selected is larger than maxTime for this machine
