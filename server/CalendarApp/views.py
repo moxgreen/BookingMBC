@@ -1,5 +1,7 @@
 import json
 import pandas as pd
+import io
+
 from datetime import datetime, timedelta
 from .models import  Booking, Machine
 from UserApp.models import UserProfile, MBCGroup
@@ -10,6 +12,13 @@ from django.db.models import Prefetch
 from django.contrib import messages
 
 
+###########################################################################################################################
+#                                                                                                                         #
+#                                         Generate downloadable reports on costs                                          #
+#                                                                                                                         #
+###########################################################################################################################
+    
+
 def download_report_facilities(request):
     # Query to get a list of all unique facilities
     facilities_list = Machine.objects.values_list('facility', flat=True).distinct()   
@@ -18,9 +27,9 @@ def download_report_facilities(request):
     end_date = request.GET.get('endDateFacilities')
     
     #define the response
-    fname="report_facilities.xlsx"
-    response = HttpResponse(content_type='application/xlsx')
-    response['Content-Disposition'] = f'attachment; filename={fname}'
+    # fname="report_facilities.xlsx"
+    # response = HttpResponse(content_type='application/xlsx')
+    # response['Content-Disposition'] = f'attachment; filename={fname}'
     
     final_df = pd.DataFrame(columns=['Group Name'])
     for facility in facilities_list:
@@ -29,10 +38,31 @@ def download_report_facilities(request):
             final_df = pd.merge(final_df, df, on='Group Name', how='outer')
 
     # Fill NaN values with 0
-    final_df.fillna(0, inplace=True)
+    final_df.fillna("", inplace=True)
+    # Create Excel file in memory
+    excel_file = io.BytesIO()
 
-    with pd.ExcelWriter(response) as writer:
-        final_df.to_excel(writer, sheet_name='Facilities Cost Summary', index=False)
+    # Use ExcelWriter to set column widths
+    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        final_df.to_excel(writer, sheet_name='Facilities', index=False)
+
+        # Access the XlsxWriter worksheet object
+        worksheet = writer.sheets['Facilities']
+
+        # Iterate through each column and set the width based on the maximum length of the column data
+        for i, col in enumerate(final_df.columns):
+            max_len = max(final_df[col].astype(str).apply(len).max(), len(col))
+            worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
+
+    excel_file.seek(0)
+
+    # Prepare response for download
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=report_facilities.xlsx'
+    response.write(excel_file.read())
+
+    # with pd.ExcelWriter(response) as writer:
+    #     final_df.to_excel(writer, sheet_name='Facilities Cost Summary', index=False)
 
     return response
 
@@ -242,6 +272,14 @@ def reports_view(request):
     return render(request, 'CalendarApp/reports_view.html', context)
 
 
+
+###########################################################################################################################
+#                                                                                                                         #
+#                                               Manage display of bookings                                                #
+#                                                                                                                         #
+###########################################################################################################################
+ 
+
 def calendar_view(request):
     user = request.user
     user_profile = UserProfile.objects.get(user=user)
@@ -264,6 +302,24 @@ def calendar_view(request):
 
 
 def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility):
+    
+    #prepare bookings as Json object
+    formatted_bookings_json = JsonFormattedBookings(user, machine2Book_name)
+    
+    #print('JSON formatting timelimit: ', timelimit, ' timelimit string:', str(timelimit))
+    context = {
+        'username': user.username,
+        'groupname': user_profile.group.group_name,
+        'facilityname': current_facility,
+        'facilities4ThisUser' : facilities4ThisUser,
+        'machine2BookName': machine2Book_name,
+        'timelimit' : str(timelimit),
+        'otherMachinesInCurrentFacility': otherMachinesInCurrentFacility,
+        'formatted_bookings_json': formatted_bookings_json,
+    }
+    return context
+
+def JsonFormattedBookings(user, machine2Book_name):
     current_datetime = timezone.now()    
     days = get_previous_sunday_and_next_saturday(current_datetime)
     #three_months_later_datetime = current_datetime + timedelta(days=90)  # Assuming 30 days per month
@@ -271,7 +327,6 @@ def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, 
 
     # Retrieve upcoming_bookings queryset for dates within the next 3 months
     upcoming_bookings = Booking.objects.filter(
-        #booked_start_date__gt=current_datetime,
         booked_start_date__gt=days['sun'],
         booked_start_date__lte=three_months_later_datetime,
         machine_obj__machine_name=machine2Book_name
@@ -301,20 +356,16 @@ def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, 
         formatted_bookings.append(formatted_booking)
     # Convert the list of formatted bookings to a JSON object
     formatted_bookings_json = json.dumps(formatted_bookings, ensure_ascii=False)
+    return formatted_bookings_json
 
-    #print('JSON formatting timelimit: ', timelimit, ' timelimit string:', str(timelimit))
-    context = {
-        'username': user.username,
-        'groupname': user_profile.group.group_name,
-        'facilityname': current_facility,
-        'facilities4ThisUser' : facilities4ThisUser,
-        'machine2BookName': machine2Book_name,
-        'timelimit' : str(timelimit),
-        'otherMachinesInCurrentFacility': otherMachinesInCurrentFacility,
-        'formatted_bookings_json': formatted_bookings_json,
-    }
-    return context
 
+
+###########################################################################################################################
+#                                                                                                                         #
+#                                                 Add/delete/move booking                                                 #
+#                                                                                                                         #
+###########################################################################################################################
+    
 
 def add_booking(request):
     dt = request.GET.get("start", None)
@@ -324,16 +375,32 @@ def add_booking(request):
     machine2Book_name = str(request.GET.get("currentmachine", None))
     title = request.GET.get("title", None)
     assistance = request.GET.get("assistance", None)
-
-    #print("assistance = ", assistance)
     assistance = (assistance == "yes")
     
     
     user = request.user
     username = user.username
     user_profile = UserProfile.objects.get(user=user)
-    #machine2Book_name = user_profile.preferred_machine_name
-    machine2Book = user_profile.machines4ThisUser.get(machine_name=machine2Book_name)    
+    machine2Book = user_profile.machines4ThisUser.get(machine_name=machine2Book_name)
+
+    # Check for overlapping events
+    overlapping_events = Booking.objects.filter(
+        machine_obj=machine2Book,
+        booked_start_date__lt=end,
+        booked_end_date__gt=start
+    )
+    
+    if overlapping_events.exists():
+        #print('add impossible!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        formatted_bookings_json = JsonFormattedBookings(user, machine2Book_name)
+        context = {
+            'status': 'error',
+            'message': 'Overlap with existing event detected.  Your calendar page will be updated.',
+            'formatted_bookings_json': formatted_bookings_json,
+        }
+        return JsonResponse(context, safe=False, status=400)
+
+    # Create and save the event    
     event = Booking(username=username,
                     title=str(title),
                     machine_obj=machine2Book,
@@ -370,11 +437,20 @@ def del_booking(request):
         return JsonResponse({"status": "success"})
     else:
         #print("delete failed")    
-        return JsonResponse({"status": "error"})
+        formatted_bookings_json = JsonFormattedBookings(user, machine2Book_name)
+        context = {
+            'status': 'error',
+            'message': 'Attempting to delete a non-existent event.  Your calendar page will be updated.',
+            'formatted_bookings_json': formatted_bookings_json,
+        }
+        return JsonResponse(context, safe=False, status=400)
 
 
 def move_booking(request):    
     machine2Book_name = str(request.GET.get("currentmachine", None))
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
+    machine2Book = user_profile.machines4ThisUser.get(machine_name=machine2Book_name)
     
     newStartStr = request.GET.get("newStart", None)
     newStart = datetime.strptime(newStartStr, "%Y-%m-%dT%H:%M:%S%z")
@@ -385,20 +461,46 @@ def move_booking(request):
     #print("newStartStr: ", newStartStr, " newStart: ", newStart, " newEndStr: ", newEndStr,
     #     " oldStartStr: ", oldStartStr, " oldStart: ", oldStart)
     
+    # Check for overlapping events
+    overlapping_events = Booking.objects.filter(
+        machine_obj=machine2Book,
+        booked_start_date__lt=newEnd,
+        booked_end_date__gt=newStart
+    ).exclude(
+        booked_start_date=oldStart  # Exclude events with the same start date as the dragged event
+    )
+    
+    if overlapping_events.exists():
+        formatted_bookings_json = JsonFormattedBookings(user, machine2Book_name)
+        context = {
+            'status': 'error',
+            'message': 'Overlap with existing event detected.  Your calendar page will be updated.',
+            'formatted_bookings_json': formatted_bookings_json,
+        }
+        return JsonResponse(context, safe=False, status=400)
+    
     # Retrieve the Booking object
     usn=request.user.username
     obj = Booking.objects.get(username=usn,
                               machine_obj__machine_name=machine2Book_name,
                               booked_start_date=oldStart)
-
+    
     # Update the Booking object
     obj.booked_start_date = newStart
     obj.booked_end_date = newEnd
-
+    
     # Save changes to the database
     obj.save()
-
+    
     return JsonResponse({"status": "success"})
+
+
+
+###########################################################################################################################
+#                                                                                                                         #
+#                                                 machine/facility buttons                                                #
+#                                                                                                                         #
+###########################################################################################################################
     
 
 def next_machine(request):
@@ -425,7 +527,6 @@ def next_machine(request):
 
     
     context = prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, machine2Book_name, timelimit, otherMachinesInCurrentFacility)
-    #return render(request, 'CalendarApp/week_view.html', context)
     json_data = json.dumps(context, ensure_ascii=False)
     return JsonResponse(json_data, safe=False)
 
@@ -508,6 +609,14 @@ def select_facility(request):
     return JsonResponse(json_data, safe=False)
 
 
+
+###########################################################################################################################
+#                                                                                                                         #
+#                                         Calculate facility usage machine by machine                                     #
+#                                                                                                                         #
+###########################################################################################################################
+    
+
 def calculate_percentage_of_workingday(user_profile, target_facility, day):
 #def calculate_percentage_of_workingday(target_facility, day):
     dates = get_previous_sunday_and_next_saturday(day)
@@ -561,6 +670,14 @@ def machines_usage(request):
     context = calculate_percentage_of_workingday(user_profile, facility, days['sun'])
     return JsonResponse(context, safe=False)
 
+
+
+###########################################################################################################################
+#                                                                                                                         #
+#                                                        Utilities                                                        #
+#                                                                                                                         #
+###########################################################################################################################
+    
 
 def get_previous_sunday_and_next_saturday(specific_date):
     # Find the previous Sunday; specific_date is a Datetime object
