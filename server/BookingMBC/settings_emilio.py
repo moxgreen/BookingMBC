@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-=#s7@(1l-o-73twul*cpcb0ho64)4g427ngxaxm)4u!t95coex"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 #ALLOWED_HOSTS = ["https://booking.unito.it/"]
 # Add '127.0.0.1' to ALLOWED_HOSTS

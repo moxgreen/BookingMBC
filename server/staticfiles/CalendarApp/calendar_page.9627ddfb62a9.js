@@ -51,8 +51,7 @@ $(document).ready(function() {
         dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'short' },
         
         // constrain to a discrete range: from today to 3 months later
-        //validRange: get3MonthsRange(new Date()), // Pass the current date to the function
-        validRange: get4MonthsRange(new Date()), // Pass the current date to the function
+        validRange: get3MonthsRange(new Date()), // Pass the current date to the function
 
 
         // a new booking is requested
@@ -108,20 +107,9 @@ $(document).ready(function() {
                           calendarWeek.addEvent(newEvent);
                           calendarWeek.unselect();
                     },
-                    error: function (xhr, status, error) {
-                        const responseData=xhr.responseJSON;
-                        if (responseData) {
-                            const errorMessage   = responseData.message; // Read the error message from the JSON response
-                            const calendarEvents = JSON.parse(responseData.formatted_bookings_json); // Extract the events from the JSON response
-                            // Print the error message
-                            alert('Error: ' + errorMessage);
-                            // refresh window with updated events
-                            calendarWeek.setOption('events', calendarEvents);
-                        } else {
-                            // No JSON data available, handle error without additional data
-                            console.log('An error occurred:', error);
-                        }
-                    } //error
+                    error: function (data) {
+                          alert('There is a problem!!!');
+                    }
                 }); //$.ajax
 
                 $('#bookingFormModal').modal('hide');
@@ -142,55 +130,46 @@ $(document).ready(function() {
 
         //drag/resize an event
         eventChange: function(changeInfo) {
-            var nowDate = new Date();
-            // Check if the event's start time is in the past
-            if (changeInfo.event.start < nowDate) {
-                // Revert the event to its original position
-                changeInfo.revert();
-                alert("You cannot drag the event to the past!");
-                return false;
-            }
-            // Check if the time selected is larger than maxTime for this machine
-            if ( !isWithinTimeLimits(changeInfo.start, changeInfo.end) ) {
+              var nowDate = new Date();
+              // Check if the event's start time is in the past
+              if (changeInfo.event.start < nowDate) {
+                  // Revert the event to its original position
                   changeInfo.revert();
-                  alert('This service cannot be booked for longer than ' + maxbt + " minutes");
-                  return false;            
-            }
+                  alert("You cannot drag the event to the past!");
+                  return false;
+              }
+              // Check if the time selected is larger than maxTime for this machine
+              if ( !isWithinTimeLimits(changeInfo.start, changeInfo.end) ) {
+                    changeInfo.revert();
+                    alert('This service cannot be booked for longer than ' + maxbt + " minutes");
+                    return false;            
+              }
 
-            var newStartStr =  changeInfo.event.startStr;
-            var newEndStr =  changeInfo.event.endStr;
-            var oldStartStr =  changeInfo.oldEvent.startStr;
-            var moveEvent = {
-                currentmachine: $('#currmachine').data('currmachine'),
-                newStart: newStartStr,
-                newEnd: newEndStr,
-                oldStart: oldStartStr,
-            };
+              var newStartStr =  changeInfo.event.startStr;
+              var newEndStr =  changeInfo.event.endStr;
+              var oldStartStr =  changeInfo.oldEvent.startStr;
+              var moveEvent = {
+                  currentmachine: $('#currmachine').data('currmachine'),
+                  newStart: newStartStr,
+                  newEnd: newEndStr,
+                  oldStart: oldStartStr,
+              };
     
-            // save the event to a server or update the UI.
-            $.ajax({
-                url: 'move_booking',
-                method: 'GET', //better for more complex data
-                type: 'GET',
-                data: moveEvent,
-                dataType: "json",
-                success: function (data) {
-                      //calendarWeek.addEvent(moveEvent);
-                      calendarWeek.unselect();
-                },
-                error: function (xhr, status, error) {
-                     const responseData=xhr.responseJSON;
-                     if (responseData) {
-                         const errorMessage   = responseData.message; // Read the error message from the JSON response
-                         const calendarEvents = JSON.parse(responseData.formatted_bookings_json); // Extract the events from the JSON response
-                         alert('Error: ' + errorMessage); // Print the error message
-                         calendarWeek.setOption('events', calendarEvents); // refresh window with updated events
-                     } else {
-                         // No JSON data available, handle error without additional data
-                         console.log('An error occurred:', error);
-                     }
-                } //error
-            }); //$.ajax
+              // save the event to a server or update the UI.
+              $.ajax({
+                  url: 'move_booking',
+                  method: 'GET', //better for more complex data
+                  type: 'GET',
+                  data: moveEvent,
+                  dataType: "json",
+                  success: function (data) {
+                        //calendarWeek.addEvent(moveEvent);
+                        calendarWeek.unselect();
+                  },
+                  error: function (data) {
+                      alert('There is a problem in dragging a booking!!!');
+                  }
+              }); //$.ajax
 
               //alert('Old time: ' + oldDateStr + ' changed into new time:' + newDateStr);
         }, //eventChange
@@ -211,28 +190,19 @@ $(document).ready(function() {
                 };            
 
                 $.ajax({
-                    url: 'del_booking',
-                    method: 'GET',
-                    type: 'GET',
- 
-                    data: Event2Del,
-                    dataType: "json",
+                   url: 'del_booking',
+                   method: 'GET',
+                   type: 'GET',
 
-                    success: function(response) {
-                      arg.event.remove()
-                    },
-                    error: function (xhr, status, error) {
-                        const responseData=xhr.responseJSON;
-                        if (responseData) {
-                            const errorMessage   = responseData.message; // Read the error message from the JSON response
-                            const calendarEvents = JSON.parse(responseData.formatted_bookings_json); // Extract the events from the JSON response
-                            alert('Error: ' + errorMessage); // Print the error message
-                            calendarWeek.setOption('events', calendarEvents); // refresh window with updated events
-                        } else {
-                            // No JSON data available, handle error without additional data
-                            console.log('An error occurred:', error);
-                        }
-                    } //error
+                   data: Event2Del,
+                   dataType: "json",
+
+                   success: function(response) {
+                     arg.event.remove()
+                   },
+                   error: function (data) {
+                     alert('There is a problem!!!');
+                   }
                 }); //$.ajax
              } //if confirm
         }, //eventClick
@@ -421,7 +391,6 @@ function changemachine(calendar, direction, itemname='') {
 };
 
 
-
 /***************** set calendarWeek title *************/
 
 function setTitle(calendar) {
@@ -524,7 +493,6 @@ function updateTableContent(updatedData) {
 }; //updateTableContent
 
 
-
 /*********** calendar month-week crosstalk ***********/
 
 //let calendarMonth talk to calendarWeekendar and update the date with that of calendarMonth
@@ -533,26 +501,6 @@ function updateWeekCalendar(calendar, selectedDate) {
     calendar.gotoDate(selectedDate);
     setTitle(calendar);
 };    
-
-
-
-/**************    time manipulation    **************/
-
-function get4MonthsRange(nowDate) {
-    var startDate = new Date(nowDate);
-    startDate.setMonth(startDate.getMonth() - 1); // Subtract 1 month to the given date
-
-    var endDate = new Date(nowDate);
-    endDate.setMonth(endDate.getMonth() + 3); // Add 3 months to the given date
-    
-    console.log(startDate);
-    console.log(endDate);
-    return {
-        start: startDate,
-        end: endDate
-    };
-};
-
 
 function get3MonthsRange(nowDate) {
     // Calculate the start of the week (Sunday) for the current date
@@ -568,13 +516,11 @@ function get3MonthsRange(nowDate) {
     };
 };
 
-
 function getDiffInMins(start, end) {
     let timeDifference = end - start;
     // Convert milliseconds to minutes
     return parseInt(timeDifference / (1000 * 60));
 }
-
 
 function isWithinTimeLimits(start,end) {
     // Check if the time selected is larger than maxTime for this machine
