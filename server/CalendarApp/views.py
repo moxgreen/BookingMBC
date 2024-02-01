@@ -308,7 +308,7 @@ def prepare_bookings(user, user_profile, current_facility, facilities4ThisUser, 
     
     #print('JSON formatting timelimit: ', timelimit, ' timelimit string:', str(timelimit))
     context = {
-        'username': user.username,
+        'username': user.last_name,
         'groupname': user_profile.group.group_name,
         'facilityname': current_facility,
         'facilities4ThisUser' : facilities4ThisUser,
@@ -324,10 +324,11 @@ def JsonFormattedBookings(user, machine2Book_name):
     days = get_previous_sunday_and_next_saturday(current_datetime)
     #three_months_later_datetime = current_datetime + timedelta(days=90)  # Assuming 30 days per month
     three_months_later_datetime = days['sun'] + timedelta(days=90)  # Assuming 30 days per month
+    one_months_before_datetime = days['sun'] - timedelta(days=30)  # Assuming 30 days per month
 
     # Retrieve upcoming_bookings queryset for dates within the next 3 months
     upcoming_bookings = Booking.objects.filter(
-        booked_start_date__gt=days['sun'],
+        booked_start_date__gt=one_months_before_datetime,
         booked_start_date__lte=three_months_later_datetime,
         machine_obj__machine_name=machine2Book_name
     )
