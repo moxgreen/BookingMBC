@@ -142,16 +142,28 @@ $(document).ready(function() {
 
         //drag/resize an event
         eventChange: function(changeInfo) {
-            var nowDate = new Date();
-            // Check if the event's start time is in the past
-            if (changeInfo.event.start < nowDate) {
+            let nowDate = new Date();
+            let oldStart=changeInfo.oldEvent.start;
+            let newStart=changeInfo.event.start;
+            
+            //Check if the event was shortened so that now it ends in the past
+            if (oldStart.getTime() === newStart.getTime() && changeInfo.event.end < nowDate) {
+                // Revert the event to its original position
+                changeInfo.revert();
+                alert("You cannot end an event in the past!");
+                return false;
+            }
+            
+            // Check if the event's start time was dragged in the past
+            if (oldStart.getTime() !== newStart.getTime() && changeInfo.event.start < nowDate) {
                 // Revert the event to its original position
                 changeInfo.revert();
                 alert("You cannot drag the event to the past!");
                 return false;
             }
+            
             // Check if the time selected is larger than maxTime for this machine
-            if ( !isWithinTimeLimits(changeInfo.start, changeInfo.end) ) {
+            if ( !isWithinTimeLimits(changeInfo.event.start, changeInfo.event.end) ) {
                   changeInfo.revert();
                   alert('This service cannot be booked for longer than ' + maxbt + " minutes");
                   return false;            
@@ -179,6 +191,7 @@ $(document).ready(function() {
                       calendarWeek.unselect();
                 },
                 error: function (xhr, status, error) {
+                     //moving to a non-updated page
                      const responseData=xhr.responseJSON;
                      if (responseData) {
                          const errorMessage   = responseData.message; // Read the error message from the JSON response
@@ -455,19 +468,7 @@ function setTitle(calendar) {
     $("#fc-dom-86").html(title);
 
     return;
-            /*
-            //old code
-            calendar.setOption('titleFormat', (info) => {
-                      //console.log("showing calendar: " + $('#currmachine').data('currmachine'));
-
-                      console.log(info);
-                      const startMonth = info.start.marker.toLocaleDateString('en-US', { month: 'short' });
-                      const endMonth = info.end.marker.toLocaleDateString('en-US', { month: 'short' });
-                      return `booking: ______ ${$('#currmachine').data('currmachine')} ______ week: ${startMonth} ${info.start.day} - ${endMonth} ${info.end.day}, ${info.start.year}`;
-                    });
-            */
-
-}
+};
 
 
 /*********** machines % of usage HTML table ***********/
@@ -545,8 +546,8 @@ function get4MonthsRange(nowDate) {
     var endDate = new Date(nowDate);
     endDate.setMonth(endDate.getMonth() + 3); // Add 3 months to the given date
     
-    console.log(startDate);
-    console.log(endDate);
+    //console.log(startDate);
+    //console.log(endDate);
     return {
         start: startDate,
         end: endDate
@@ -579,11 +580,13 @@ function getDiffInMins(start, end) {
 function isWithinTimeLimits(start,end) {
     // Check if the time selected is larger than maxTime for this machine
     maxbt = parseInt($('#timelimit').data('timelimit'));
+    //console.log("maxbt: "+maxbt);
     if (maxbt == 0) {
     // if maxbt == 0 there is no time constraint
         return true;    
     }
     let duration = getDiffInMins(start, end);
+    //console.log("duration: "+duration);
     if ( duration > maxbt) {
         //duration exceeds limits
         return false;            
