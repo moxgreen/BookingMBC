@@ -354,9 +354,6 @@ def JsonFormattedBookings(user, machine2Book_name):
                 formatted_booking["color"]="lightgrey"
             else:
                 formatted_booking["color"]="LightSteelBlue"
-        print("booking.booked_end_date: ", booking.booked_end_date )
-        print("booking.machine_obj.hourly_cost: ", booking.machine_obj.hourly_cost )
-
         if booking.booked_end_date > current_datetime and booking.machine_obj.hourly_cost == 0 :
             formatted_booking["durationEditable"]= True
 
