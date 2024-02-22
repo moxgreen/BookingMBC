@@ -118,7 +118,9 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
             else:
                 cost_field='hourly_cost'
 
-        hourly_cost = float(getattr(booking.machine_obj, cost_field))
+
+        cost_str = getattr(booking.machine_obj, cost_field)
+        hourly_cost = float(cost_str)
         
         total_cost = hourly_cost * duration_hours
 

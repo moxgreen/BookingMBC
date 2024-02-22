@@ -5,12 +5,12 @@ class Machine(models.Model):
     facility = models.CharField(max_length=100)
     is_open = models.BooleanField(default=True, null=True, blank=True)
     max_booking_duration = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    hourly_cost = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    hourly_cost_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    hourly_cost_external = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    hourly_cost_external_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    hourly_cost_buyer = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=True, blank=True )
-    hourly_cost_buyer_assisted = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=True, blank=True )
+    hourly_cost = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
+    hourly_cost_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
+    hourly_cost_external = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
+    hourly_cost_external_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
+    hourly_cost_buyer = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=False, blank=False)
+    hourly_cost_buyer_assisted = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=False, blank=False)
 
     def __str__(self):
         return self.machine_name
