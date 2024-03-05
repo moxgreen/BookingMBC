@@ -8,4 +8,4 @@ done
 python manage.py makemigrations
 python manage.py migrate
 export PYTHONMALLOC=debug
-gunicorn --bind 0.0.0.0:8001 BookingMBC.wsgi
+gunicorn --bind 0.0.0.0:8001 BookingMBC.wsgi --timeout 240

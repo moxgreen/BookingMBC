@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Prefetch
 from django.contrib import messages
+from django.db import transaction
 
 
 ###########################################################################################################################
@@ -72,17 +73,26 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
     end=datetime.strptime(end_date, '%Y-%m-%d')
     # Get Booking instances for the facility
     #print('start: ', start, 'end: ', end, facility)
-    bookings = Booking.objects.filter(machine_obj__facility=facility,
-                                      booked_start_date__date__gte=start.date(),
-                                      booked_end_date__date__lte=end.date()
-                                     )
-    group_costs = {}
-    
-    for booking in bookings:
-        usn=str(booking.username)
+    with transaction.atomic():
+        bookings = Booking.objects.filter(machine_obj__facility=facility,
+                                        booked_start_date__date__gte=start.date(),
+                                        booked_end_date__date__lte=end.date()
+                                        )
+        group_costs = {}
+        booking_formatted = []
+        for booking in bookings.iterator():
+            booking_formatted.append(
+                (str(booking.username),
+                booking.booked_end_date - booking.booked_start_date, 
+                booking.machine_obj,
+                booking.is_assisted)
+            )
+
+    for booking in booking_formatted:
+        usn=booking[0]
 
         # Calculate the duration by subtracting booked_end_date from booked_start_date
-        duration_timedelta = booking.booked_end_date - booking.booked_start_date
+        duration_timedelta = booking[1]
         duration_hours = duration_timedelta.total_seconds() / 3600
         try:
             u = UserProfile.objects.get(user__username = usn)
@@ -94,7 +104,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
             buyer = False
             #check if the user of this booking has ever bought machines
             if (mb.count() != 0):
-                thisBookedMachine = booking.machine_obj
+                thisBookedMachine = booking[2]
                 #search if the machine of this booking is present
                 #    in the list of machines bought by the user
                 buyer = u.group.machines_bought.filter(pk=thisBookedMachine.pk).exists()
@@ -103,7 +113,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
             external = buyer = False            
             
         # Calculate the total cost based on the machine type (assisted or external)
-        if (booking.is_assisted):
+        if (booking[3]):
             if buyer:
                 cost_field='hourly_cost_buyer_assisted'
             elif external:
@@ -119,7 +129,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
                 cost_field='hourly_cost'
 
 
-        cost_str = getattr(booking.machine_obj, cost_field)
+        cost_str = getattr(booking[2], cost_field)
         hourly_cost = float(cost_str)
         
         total_cost = hourly_cost * duration_hours
@@ -129,7 +139,7 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
             group_costs[g_name] += total_cost
         else:
             group_costs[g_name] = total_cost
-    
+        
     # Convert the dictionary to a Pandas DataFrame
     df = pd.DataFrame(list(group_costs.items()), columns=['Group Name', facility])
     return df
