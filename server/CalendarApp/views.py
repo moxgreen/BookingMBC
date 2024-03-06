@@ -122,7 +122,12 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
         cost_str = getattr(booking.machine_obj, cost_field)
         hourly_cost = float(cost_str)
         
-        total_cost = hourly_cost * duration_hours
+        extra_time = 0
+        if duration_hours > 4:
+            extra_time = duration_hours - 4
+            duration_hours = 4
+                    
+        total_cost = hourly_cost * duration_hours + (hourly_cost / 2) * extra_time
 
         # Update the dictionary with the cost for the current group
         if g_name in group_costs:
@@ -229,7 +234,12 @@ def generate_report_dataframe_group(group_name, report_type, start_date, end_dat
 
             hourly_cost = float(getattr(booking.machine_obj, cost_field))
 
-            total_cost = hourly_cost * duration_hours
+            extra_time = 0
+            if duration_hours > 4:
+                extra_time = duration_hours - 4
+                duration_hours = 4
+
+            total_cost = hourly_cost * duration_hours  + (hourly_cost / 2) * extra_time
 
             # Append a dictionary with the required data to the report_data list
             report_data.append({

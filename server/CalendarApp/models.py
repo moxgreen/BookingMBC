@@ -9,8 +9,8 @@ class Machine(models.Model):
     hourly_cost_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
     hourly_cost_external = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
     hourly_cost_external_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
-    hourly_cost_buyer = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=False, blank=False)
-    hourly_cost_buyer_assisted = models.DecimalField(default=0, max_digits=5, decimal_places=2, null=False, blank=False)
+    hourly_cost_buyer = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
+    hourly_cost_buyer_assisted = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False, default=0)
 
     def __str__(self):
         return self.machine_name
