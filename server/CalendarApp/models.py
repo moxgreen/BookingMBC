@@ -18,7 +18,7 @@ class Machine(models.Model):
 class Booking(models.Model):
     username = models.CharField(max_length=100)
     title = models.CharField(max_length=100)
-    machine_obj = models.ForeignKey(Machine, on_delete=models.DO_NOTHING)
+    machine_obj = models.ForeignKey(Machine, on_delete=models.CASCADE)
     booked_start_date = models.DateTimeField()
     booked_end_date = models.DateTimeField()
     is_assisted = models.BooleanField(default=True, null=True, blank=True)
