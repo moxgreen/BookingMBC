@@ -27,11 +27,6 @@ def download_report_facilities(request):
     start_date = request.GET.get('startDateFacilities')
     end_date = request.GET.get('endDateFacilities')
     
-    #define the response
-    # fname="report_facilities.xlsx"
-    # response = HttpResponse(content_type='application/xlsx')
-    # response['Content-Disposition'] = f'attachment; filename={fname}'
-    
     final_df = pd.DataFrame(columns=['Group Name'])
     for facility in facilities_list:
         df=generate_report_dataframe_facility(facility, start_date, end_date)
@@ -61,9 +56,6 @@ def download_report_facilities(request):
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=report_facilities.xlsx'
     response.write(excel_file.read())
-
-    # with pd.ExcelWriter(response) as writer:
-    #     final_df.to_excel(writer, sheet_name='Facilities Cost Summary', index=False)
 
     return response
 
@@ -132,12 +124,12 @@ def generate_report_dataframe_facility(facility, start_date, end_date):
         cost_str = getattr(booking[2], cost_field)
         hourly_cost = float(cost_str)
         
-        extra_time = 0
+        discounted_time = 0
         if duration_hours > 4:
-            extra_time = duration_hours - 4
+            discounted_time = duration_hours - 4
             duration_hours = 4
                     
-        total_cost = hourly_cost * duration_hours + (hourly_cost / 2) * extra_time
+        total_cost = hourly_cost * duration_hours + (hourly_cost / 2) * discounted_time
 
         # Update the dictionary with the cost for the current group
         if g_name in group_costs:
@@ -169,14 +161,40 @@ def download_report_group(request):
             return redirect('CalendarApp:reports_view')
 
     messages.success(request, '')
-                     #"Expense summary report is being generated and will be available for download shortly.")
-    fname="report.xlsx"
-    response = HttpResponse(content_type='application/xlsx')
-    response['Content-Disposition'] = f'attachment; filename={fname}'
-    
-    with pd.ExcelWriter(response) as writer:
+
+    # Create Excel file in memory
+    excel_file = io.BytesIO()
+
+    # Use ExcelWriter to set column widths
+    with pd.ExcelWriter(excel_file,
+                        engine='xlsxwriter',
+                        engine_kwargs={'options': {'strings_to_numbers': True}}) as writer:
         df2.to_excel(writer, sheet_name='Cost Summary', index=False)
+
+        # Access the XlsxWriter worksheet object
+        worksheet = writer.sheets['Cost Summary']
+
+        # Iterate through each column and set the width based on the maximum length of the column data
+        for i, col in enumerate(df2.columns):
+            max_len = max(df2[col].astype(str).apply(len).max(), len(col))
+            worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
+
         df1.to_excel(writer, sheet_name='Detailed Expenses', index=False)
+
+        # Access the XlsxWriter worksheet object
+        worksheet = writer.sheets['Detailed Expenses']
+
+        # Iterate through each column and set the width based on the maximum length of the column data
+        for i, col in enumerate(df1.columns):
+            max_len = max(df1[col].astype(str).apply(len).max(), len(col))
+            worksheet.set_column(i, i, max_len + 2)  # Add a little extra space
+
+    excel_file.seek(0)
+
+    # Prepare response for download
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=report.xlsx'
+    response.write(excel_file.read())
 
     return response
 
@@ -244,6 +262,7 @@ def generate_report_dataframe_group(group_name, report_type, start_date, end_dat
 
             hourly_cost = float(getattr(booking.machine_obj, cost_field))
 
+            real_duration_hours = duration_hours
             extra_time = 0
             if duration_hours > 4:
                 extra_time = duration_hours - 4
@@ -259,7 +278,7 @@ def generate_report_dataframe_group(group_name, report_type, start_date, end_dat
                 'facility': booking.machine_obj.facility,
                 'date': booking.booked_start_date.strftime("%d-%b-%Y"),
                 'hourly cost': hourly_cost,
-                'hours': duration_hours,
+                'hours': real_duration_hours,
                 'total cost': total_cost,
             })
 

@@ -35,7 +35,39 @@ class MachineAdmin(admin.ModelAdmin):
             response.context_data['all_facilities'] = Machine.objects.values('facility').annotate(total=Count('facility'))
 
         return response
+    
+    def delete_queryset(self, request, queryset):
+        # navigate the selected Machines to delete
+        for obj in queryset:
+            # Update UserProfile instances with preferred_machine_name equal to the machine_name of the Machine being deleted
+            UserProfile.objects.filter(preferred_machine_name=obj.machine_name).update(preferred_machine_name="Seminar room")
+            
+            # Get all related UserProfiles using this machine to delete
+            related_profiles = UserProfile.objects.filter(machines4ThisUser=obj)
+             
+            # Remove the machine being deleted from the machines4ThisUser field of all related UserProfiles
+            for profile in related_profiles:
+                 profile.machines4ThisUser.remove(obj)
+    
+        # Now delete all objects in the queryset
+        queryset.delete()
+    
+        # Call the superclass method to perform the default delete operation
+        super().delete_queryset(request, queryset)
+        
 
+    def delete_model(self, request, obj):
+        # Update related fields to standard machine named "Seminar room"
+        UserProfile.objects.filter(preferred_machine_name=obj.machine_name).update(preferred_machine_name="Seminar room")
+        # Now delete the instances of machine to be delete where it appears in machines4ThisUser
+        # 1) Get all related UserProfiles
+        related_profiles = UserProfile.objects.filter(machines4ThisUser=obj)
+         
+        # 2) Remove the machine being deleted from the machines4ThisUser field of all related UserProfiles
+        for profile in related_profiles:
+             profile.machines4ThisUser.remove(obj)
+
+        obj.delete()
 
     def get_urls(self):
         urls = super().get_urls()
