@@ -9,6 +9,7 @@ services:
       - db
     ports:
       - "8011:8001"
+    restart: always
 
   db:
     image: mysql:8.0.21
@@ -22,7 +23,8 @@ services:
       - ./db/script.sql:/data/application/init.sql
       - bookimgmbc_db:/var/lib/mysql
     cap_add:
-      - SYS_NICE  
+      - SYS_NICE 
+    restart: always 
 
 volumes:
   bookimgmbc_db:

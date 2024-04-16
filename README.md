@@ -23,17 +23,6 @@ To close it:
 Similarly, db shell can be accessed:
 * mysql --host=127.0.0.1 --port=30002 -u root -p
 
-## Backup and restore data
-### Backing up database
-* For safety, it is recommended to stop the service before backing up the db.
-* Run sudo docker-compose run --rm db-backup
-* Backup is to be found in the ./backup directory.
-
-### Restoring database
-* **Stop the service before restoring the backup**.
-* Place the backup file *triplex_db.tar.bz2* inside the ./backup directory
-* Run sudo docker-compose run --rm db-restore
-
 ## Usage in debug mode - outside docker
 It is possible to launch the software outside of the docker container for debug and develop purposes.
 * Launch the database docker service with 
