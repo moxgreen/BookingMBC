@@ -1,7 +1,7 @@
 # Primitive backup utility
 ## Schedule daily or weekly backup
 * crontab -e
-* 0 {hour} * * * {path}/run_backup.sh
+* export C_PASSWORD_MBC={password} && export github_token={token} 0 {hour} * * * {path}/run_backup.sh
 
 ## Restore backup
 * Remove encryption openssl aes-256-cbc -d -a -pbkdf2 -in booking_mbc_24_03_06_backup.tar.gz.enc -out out
