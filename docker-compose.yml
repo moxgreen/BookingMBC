@@ -15,12 +15,12 @@ services:
     image: mysql:8.0.21
     ports:
       - "30002:3306"
-    command: --init-file /data/application/init.sql
+    command: --init-file /data/application/init.sql      # correspond to /db/init.sql in the repository see section volumes below
     environment:
       MYSQL_ROOT_PASSWORD: bookimgmbc
       MYSQL_DATABASE: bookimgmbc
     volumes:
-      - ./db/script.sql:/data/application/init.sql
+      - ./db/init.sql:/data/application/init.sql
       - bookimgmbc_db:/var/lib/mysql
     cap_add:
       - SYS_NICE 
