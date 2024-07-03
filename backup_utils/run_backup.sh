@@ -10,6 +10,7 @@ rm -rf $(pwd)/booking_mbc_backup__
 cd booking_mbc_backup && git add . && git commit -m "daily_backup" && git push https://Marco-Masera:$github_token@github.com/Marco-Masera/booking_mbc_backup.git
 
 #Remove old backups to avoid saturating the disk with old backups
+cd /home/mamasera
 directory="booking_mbc_backup"
 
 # Maximum number of backups to keep
