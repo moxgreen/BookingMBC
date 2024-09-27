@@ -1,7 +1,5 @@
 # Booking MBC
 
-## Docs from Stabulario to be adapted - work in progress
-
 ## Installation
 ### Creating the db volume:
 sudo docker volume create booking_mbc
