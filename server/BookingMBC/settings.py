@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-=#s7@(1l-o-73twul*cpcb0ho64)4g427ngxaxm)4u!t95coex
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["booking.unito.it"]
+ALLOWED_HOSTS = ["booking.unito.it", "127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = ['https://booking.unito.it']
 
 # Application definition
@@ -82,9 +82,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "bookingmbc",
-        'USER': "root",
-        'PASSWORD': "bookimgmbc",
-        'HOST': "db", 
+        'USER': "bookingmbc",
+        'PASSWORD': "bookingmbc",
+        'HOST': "localhost", 
         'PORT': "3306"
     }
 }

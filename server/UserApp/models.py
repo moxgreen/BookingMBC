@@ -42,7 +42,7 @@ class UserProfile(models.Model):
     
 
 
-@receiver(post_save, sender=User)
+#@receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and instance.is_superuser:
         # Create a UserProfile instance when a superuser is created
@@ -58,7 +58,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         u.machines4ThisUser.set(machines_queryset)
 
 
-@receiver(post_save, sender=User)
+#@receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
      # Save the UserProfile whenever the associated User is saved
     if instance.is_superuser:
