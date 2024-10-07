@@ -1,3 +1,5 @@
+SH=bash
+
 install-mysql:
 	@echo "Installing MySQL"
 	sudo apt update \

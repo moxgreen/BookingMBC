@@ -1,7 +1,7 @@
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from django.contrib.auth.models import User
 from django import forms
-from .models import UserProfile, MBCGroup
+from .models import UserProfile, Group
 from CalendarApp.models import Machine
 
 
@@ -16,7 +16,7 @@ class SignUpForm(UserCreationForm):
     group_name = forms.ModelChoiceField(
         label="Group Name",
         help_text='<span class="form-text text-muted"><small>Choose one group name.</small></span>',
-        queryset=MBCGroup.objects.all().order_by('group_name'), #all(),
+        queryset=Group.objects.all().order_by('group_name'), #all(),
         widget=forms.Select(attrs={'class': 'form-control'}),
         required=True
     )
@@ -87,8 +87,6 @@ class SignUpForm(UserCreationForm):
         user_profile.save()
         
         user_profile.group = selected_group
-        if user_profile.group.location == 'NO MBC':
-            is_external = True
         user_profile.machines4ThisUser.set(selected_machines)
         user_profile.preferred_machine_name = preferred_machine.machine_name
         user_profile.is_external = is_external

@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
-from .models import UserProfile, MBCGroup
+from .models import UserProfile, Group, Department
 from CalendarApp.models import Machine
 
 
@@ -313,7 +313,7 @@ class InitialLetterFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         # Get the distinct initial letters in the group names
-        group_names = MBCGroup.objects.values_list('group_name', flat=True)
+        group_names = Group.objects.values_list('group_name', flat=True)
         initial_letters = set(name[0].upper() for name in group_names if name)
         return [(letter, letter) for letter in sorted(initial_letters)]
 
@@ -324,20 +324,16 @@ class InitialLetterFilter(admin.SimpleListFilter):
         return queryset
 
 
-class MBCGroupAdmin(admin.ModelAdmin):
-    list_display = ('group_name', 'location')
-    list_filter = (InitialLetterFilter, 'location') #add list filters
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ('group_name', 'get_department_name')
+
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else ''
+    get_department_name.short_description = 'Department Name'
+
+    list_filter = (InitialLetterFilter,)  # Add list filters
     search_fields = ['group_name']  # Add this line to enable search by username
     ordering = ['group_name']  # Add ordering by group_name
-
-    def changelist_view(self, request, extra_context=None):
-        response = super().changelist_view(request, extra_context=extra_context)
-        # Check if the response is an instance of TemplateResponse
-        if isinstance(response, TemplateResponse):
-            # Add a custom context variable to display unique group names
-            response.context_data['locations'] = MBCGroup.objects.values_list('location', flat=True).distinct()
-        
-        return response
         
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == 'machines_bought':
@@ -345,5 +341,10 @@ class MBCGroupAdmin(admin.ModelAdmin):
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
+class DepartmentAdmin(admin.ModelAdmin):
+    search_fields = ['name']  # Add this line to enable search by name
+    ordering = ['name']  # Add ordering by name
+
 admin.site.register(UserProfile, UserProfileAdmin)
-admin.site.register(MBCGroup, MBCGroupAdmin)
+admin.site.register(Group, GroupAdmin)
+admin.site.register(Department, DepartmentAdmin)

@@ -9,7 +9,7 @@ import pandas as pd
 import django
 from xlsx2groups import populate_database
 
-from UserApp.models import UserProfile, MBCGroup
+from UserApp.models import UserProfile, Group
 #from CalendarApp.models import Machine
 
 fixed = {
@@ -19,7 +19,7 @@ fixed = {
 }
 
 def fix_group_name(group_name):
-    g = MBCGroup.objects.filter(group_name__icontains=group_name)
+    g = Group.objects.filter(group_name__icontains=group_name)
     if (len(g)==1):
         return g[0].group_name
     print(f"Group name: {group_name} - found: {len(g)}")
@@ -52,9 +52,9 @@ def populate_model(excel_filename):
             user_profile = UserProfile.objects.get(user__email=email)
     
             try:
-                # Try to find MBCGroup based on group_name
+                # Try to find Group based on group_name
                 gname = fix_group_name(gname)
-                mbc_group = MBCGroup.objects.get(group_name__iexact=gname)
+                mbc_group = Group.objects.get(group_name__iexact=gname)
     
                 # Update UserProfile's group field
                 user_profile.group = mbc_group
@@ -62,8 +62,8 @@ def populate_model(excel_filename):
                 # Save the changes to the database
                 user_profile.save()
     
-            except MBCGroup.DoesNotExist:
-                print(f"Error: MBCGroup with group_name '{gname}' not found.")
+            except Group.DoesNotExist:
+                print(f"Error: Group with group_name '{gname}' not found.")
                 error = True
         except UserProfile.DoesNotExist:
             print(f"Error: UserProfile with email '{email}' not found.")

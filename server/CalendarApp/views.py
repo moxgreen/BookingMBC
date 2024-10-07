@@ -4,7 +4,7 @@ import io
 
 from datetime import datetime, timedelta
 from .models import  Booking, Machine
-from UserApp.models import UserProfile, MBCGroup
+from UserApp.models import UserProfile, Group
 from django.shortcuts import  render, HttpResponse, redirect
 from django.http import JsonResponse 
 from django.utils import timezone
@@ -307,7 +307,7 @@ def machines(request):
 
 def reports_view(request):
     # Get distinct group names
-    distinct_groups = MBCGroup.objects.values_list('group_name', flat=True)
+    distinct_groups = Group.objects.values_list('group_name', flat=True)
 
     context = {'distinct_groups': distinct_groups}
     return render(request, 'CalendarApp/reports_view.html', context)

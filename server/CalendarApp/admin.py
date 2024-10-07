@@ -3,7 +3,7 @@ from django.template.response import TemplateResponse
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from .models import Machine, Booking
-from UserApp.models import UserProfile, MBCGroup
+from UserApp.models import UserProfile, Group
 
 import pandas as pd
 import io
@@ -168,7 +168,7 @@ class GroupNameFilter(admin.SimpleListFilter):
     parameter_name = 'group_name'
 
     def lookups(self, request, model_admin):
-        return MBCGroup.objects.values_list('group_name', 'group_name')
+        return Group.objects.values_list('group_name', 'group_name')
 
     def queryset(self, request, queryset):
         if self.value():
@@ -205,7 +205,7 @@ class BookingAdmin(admin.ModelAdmin):
     #machine_obj.short_description = 'Machine'
 
     def get_group_name_choices(self, request, model_admin):
-        return MBCGroup.objects.values_list('group_name', flat=True)
+        return Group.objects.values_list('group_name', flat=True)
 
 
     def get_facility_choices(self, request, model_admin):
